@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
     def __addMenuBar(self):
         mainMenu = self.menuBar()
         fileMenu.FileMenu(app, self, mainMenu, self.centralW)
-        editMenu.EditMenu(mainMenu, self.centralW)
+        editMenu.EditMenu(app, mainMenu, self.centralW)
         specialMenu.SpecialMenu(mainMenu, self.centralW)
 
     def __addToolBar(self):

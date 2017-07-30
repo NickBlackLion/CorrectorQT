@@ -38,3 +38,6 @@ class CentralWidget(QWidget):
 
     def getCursor(self):
         return self.cursor
+
+    def getTextArea(self):
+        return self.textArea
