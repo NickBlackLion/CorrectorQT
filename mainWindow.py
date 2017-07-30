@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QSpinBox, QPushButton
 import sys
 import fileMenu, editMenu, specialMenu, centralWidget
+import MySQLdb as mdb
 
 
 class MainWindow(QMainWindow):
@@ -15,6 +16,16 @@ class MainWindow(QMainWindow):
         self.__addCentralWidget()
         self.__addMenuBar()
         self.__addToolBar()
+
+        con = mdb.connect('localhost', 'root', 'root', 'Corrector')
+
+        try:
+            cur = con.cursor()
+            with open('tables', encoding='utf-8') as f:
+                for value in f:
+                    cur.execute("create table {0}(Id int PRIMARY KEY AUTO_INCREMENT, regex VARCHAR(255), comment VARCHAR(255));".format(value.strip('\n')))
+        except mdb.Error:
+            print('Tables already exist')
 
         self.show()
 
