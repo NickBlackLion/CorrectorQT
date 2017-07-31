@@ -7,7 +7,8 @@ import MySQLdb as mdb
 class MainWindow(QMainWindow):
     def __init__(self, app):
         QMainWindow.__init__(self)
-        self.resize(800, 500)
+        self.resize(1000, 500)
+        self.move(100, 40)
         self.setWindowTitle('Корректор')
         self.app = app
 
@@ -72,21 +73,29 @@ class MainWindow(QMainWindow):
     def __changeTextFamily(self):
         cursor = self.centralW.getTextArea().textCursor()
         text = cursor.selectedText()
-        cursor.insertHtml('<body style="font-family: ' + self.fontFamily.currentText() + '">' + text + '</body>')
+        font = cursor.charFormat().font()
+        print(font.family(), font.pointSize())
+        cursor.insertHtml('<p style="font-family: ' + self.fontFamily.currentText() + '; font-size: '
+                          + font.pointSize() + 'pt">' + text + '</p>')
 
     def __changeTextSize(self):
         cursor = self.centralW.getTextArea().textCursor()
         text = cursor.selectedText()
-        cursor.insertHtml('<body style="font-size: ' + self.fontSize.currentText() + 'pt">' + text + '</body>')
+        font = cursor.charFormat().font()
+        print(font.family(), font.pointSize())
+        cursor.insertHtml('<p style="font-family: ' + font.family() + '; font-size: '
+                          + self.fontSize.currentText() + 'pt">' + text + '</p>')
 
     def __changeTextWeight(self):
         cursor = self.centralW.getTextArea().textCursor()
         text = cursor.selectedText()
-        print(cursor.charFormat().font().bold())
-        if not cursor.charFormat().font().bold():
-            cursor.insertHtml('<body style="font-weight: bold">' + text + '</body>')
+        font = cursor.charFormat().font()
+        if not font.bold():
+            cursor.insertHtml('<p style="font-weight: bold; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
         else:
-            cursor.insertHtml('<body style="font-weight: normal">' + text + '</body>')
+            cursor.insertHtml('<p style="font-weight: normal; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

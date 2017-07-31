@@ -47,4 +47,4 @@ class Searcher:
         self.cursor.setPosition(1)
         font = self.cursor.blockCharFormat().font()
         self.textArea.clear()
-        self.cursor.insertHtml('<body style="font-family: ' + font.family() + '">' + text + '</body>')
+        self.cursor.insertHtml('<body style="font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</body>')
