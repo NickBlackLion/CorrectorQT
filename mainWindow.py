@@ -21,9 +21,10 @@ class MainWindow(QMainWindow):
 
         try:
             cur = con.cursor()
-            with open('tables', encoding='utf-8') as f:
+            with open('categories', encoding='utf-8') as f:
                 for value in f:
-                    cur.execute("create table {0}(Id int PRIMARY KEY AUTO_INCREMENT, regex VARCHAR(255), comment VARCHAR(255));".format(value.strip('\n')))
+                    val = value.split(';')
+                    cur.execute("create table {0}(Id int PRIMARY KEY AUTO_INCREMENT, regex VARCHAR(255), comment VARCHAR(255));".format(val[1].strip(' \n')))
         except mdb.Error:
             print('Tables already exist')
 
@@ -38,11 +39,19 @@ class MainWindow(QMainWindow):
     def __addToolBar(self):
         toolBar = self.addToolBar('Exit')
 
-        fontBox = QComboBox(toolBar)
-        fontSize = QSpinBox(toolBar)
+        self.fontFamily = QComboBox(toolBar)
+        self.fontFamily.addItem('Times New Roman')
+        self.fontFamily.activated.connect(self.__changeTextFamily)
+        self.fontFamily.addItem('Segoe UI')
+
+        self.fontSize = QComboBox(toolBar)
+        for i in range(6, 31):
+            self.fontSize.addItem(str(i))
+        self.fontSize.activated.connect(self.__changeTextSize)
 
         bButton = QPushButton('B', toolBar)
         bButton.setStyleSheet("QPushButton {font-weight: bold}")
+        bButton.clicked.connect(self.__changeTextWeight)
 
         kButton = QPushButton('K', toolBar)
         kButton.setStyleSheet("QPushButton {font-style: italic}")
@@ -50,8 +59,8 @@ class MainWindow(QMainWindow):
         iButton = QPushButton('I', toolBar)
         iButton.setStyleSheet("QPushButton {text-decoration: underline}")
 
-        toolBar.addWidget(fontBox)
-        toolBar.addWidget(fontSize)
+        toolBar.addWidget(self.fontFamily)
+        toolBar.addWidget(self.fontSize)
         toolBar.addSeparator()
         toolBar.addWidget(bButton)
         toolBar.addWidget(kButton)
@@ -60,6 +69,24 @@ class MainWindow(QMainWindow):
     def __addCentralWidget(self):
         self.setCentralWidget(self.centralW)
 
+    def __changeTextFamily(self):
+        cursor = self.centralW.getTextArea().textCursor()
+        text = cursor.selectedText()
+        cursor.insertHtml('<body style="font-family: ' + self.fontFamily.currentText() + '">' + text + '</body>')
+
+    def __changeTextSize(self):
+        cursor = self.centralW.getTextArea().textCursor()
+        text = cursor.selectedText()
+        cursor.insertHtml('<body style="font-size: ' + self.fontSize.currentText() + 'pt">' + text + '</body>')
+
+    def __changeTextWeight(self):
+        cursor = self.centralW.getTextArea().textCursor()
+        text = cursor.selectedText()
+        print(cursor.charFormat().font().bold())
+        if not cursor.charFormat().font().bold():
+            cursor.insertHtml('<body style="font-weight: bold">' + text + '</body>')
+        else:
+            cursor.insertHtml('<body style="font-weight: normal">' + text + '</body>')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

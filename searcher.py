@@ -1,6 +1,5 @@
-import re
 import MySQLdb as mdb
-from PyQt5.QtGui import QTextDocument, QTextCursor
+from PyQt5.QtCore import QRegExp
 
 
 class Searcher:
@@ -9,8 +8,9 @@ class Searcher:
         self.cursor = centralW.getCursor()
         self.textArea = centralW.getTextArea()
 
-    def searchAndMark(self, tableName):
-        text = self.doc.toPlainText().split('\n')
+    def searchAndMark(self, tableName, rgbColor=None):
+        self.textDemark()
+
         allRegex = None
         con = mdb.connect('localhost', 'root', 'root', 'Corrector', charset="utf8")
 
@@ -28,10 +28,23 @@ class Searcher:
                 cur.execute('select * from {0}'.format(nameForTableLoad))
                 allRegex = cur.fetchall()
 
-        for value in text:
-            for val in allRegex:
-                result = re.findall(val[1], value)
+        index = 0
 
-                for key in result:
-                    curs = self.doc.find(key)
-                    print(curs.selectedText())
+        for val in allRegex:
+            while index != -1:
+                regex = QRegExp(val[1])
+                curs = self.doc.find(regex, index)
+                font = self.textArea.currentFont()
+                print(font.pointSize(), font.family())
+                self.doc.find(regex, index).insertHtml("<p style='background-color: #88B6FC;'>" + curs.selectedText()
+                                                       + "</p>")
+                self.textArea.setStyleSheet("QTextEdit {font-family: " + font.family() + "; font-size: "
+                                            + str(font.pointSize()) + "pt}")
+                index = curs.position()
+
+    def textDemark(self):
+        text = self.textArea.toPlainText()
+        self.cursor.setPosition(1)
+        font = self.cursor.blockCharFormat().font()
+        self.textArea.clear()
+        self.cursor.insertHtml('<body style="font-family: ' + font.family() + '">' + text + '</body>')

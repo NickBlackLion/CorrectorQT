@@ -48,5 +48,7 @@ class CentralWidget(QWidget):
 
     def makeSearch(self, state, category):
         if state == Qt.Checked:
-            se = Searcher(self)
-            se.searchAndMark(category)
+            self.se = Searcher(self)
+            self.se.searchAndMark(category)
+        else:
+            self.se.textDemark()
