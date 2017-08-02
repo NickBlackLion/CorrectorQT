@@ -1,5 +1,6 @@
 import MySQLdb as mdb
 from PyQt5.QtCore import QRegExp
+from PyQt5.QtWidgets import QToolTip
 
 
 class Searcher:
@@ -7,6 +8,9 @@ class Searcher:
         self.doc = centralW.getDocument()
         self.cursor = centralW.getCursor()
         self.textArea = centralW.getTextArea()
+
+        self.cursorPoints = []
+        self.comments = {}
 
     def searchAndMark(self, tableName, rgbColor=None):
         self.textDemark()
@@ -28,23 +32,40 @@ class Searcher:
                 cur.execute('select * from {0}'.format(nameForTableLoad))
                 allRegex = cur.fetchall()
 
-        index = 0
-
         for val in allRegex:
+            index = 0
+
             while index != -1:
                 regex = QRegExp(val[1])
-                curs = self.doc.find(regex, index)
-                font = self.textArea.currentFont()
-                print(font.pointSize(), font.family())
-                self.doc.find(regex, index).insertHtml("<p style='background-color: #88B6FC;'>" + curs.selectedText()
-                                                       + "</p>")
-                self.textArea.setStyleSheet("QTextEdit {font-family: " + font.family() + "; font-size: "
-                                            + str(font.pointSize()) + "pt}")
-                index = curs.position()
+                font = self.textArea.textCursor().blockCharFormat().font()
+                cursor = self.doc.find(regex, index)
+
+                if cursor.position() != -1:
+                    boundary = (cursor.position() - len(cursor.selectedText()), cursor.position())
+                    self.comments[boundary] = val[2]
+                    self.cursorPoints.append(boundary)
+
+                cursor.insertHtml('<p style="background-color: #88B6FC; font-family: '
+                                                       + font.family() + '; font-size: ' + str(font.pointSize())
+                                                       + 'pt">' + cursor.selectedText() + "</p>")
+
+                index = cursor.position()
+
+            print(self.cursorPoints)
 
     def textDemark(self):
         text = self.textArea.toPlainText()
-        self.cursor.setPosition(1)
-        font = self.cursor.blockCharFormat().font()
+        cursor = self.textArea.textCursor()
+        cursor.setPosition(3)
+        font = cursor.blockCharFormat().font()
         self.textArea.clear()
-        self.cursor.insertHtml('<body style="font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</body>')
+        cursor.insertHtml('<body style="font-family: ' + font.family() + '; font-size: ' + str(font.pointSize())
+                          + 'pt">' + text + '</body>')
+
+        self.cursorPoints.clear()
+
+    def getCursorPoints(self):
+        return self.cursorPoints
+
+    def getComments(self):
+        return self.comments

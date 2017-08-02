@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         font = cursor.charFormat().font()
         print(font.family(), font.pointSize())
         cursor.insertHtml('<p style="font-family: ' + self.fontFamily.currentText() + '; font-size: '
-                          + font.pointSize() + 'pt">' + text + '</p>')
+                          + str(font.pointSize()) + 'pt">' + text + '</p>')
 
     def __changeTextSize(self):
         cursor = self.centralW.getTextArea().textCursor()
