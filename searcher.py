@@ -1,6 +1,5 @@
 import MySQLdb as mdb
 from PyQt5.QtCore import QRegExp
-from PyQt5.QtWidgets import QToolTip
 
 
 class Searcher:
@@ -12,7 +11,9 @@ class Searcher:
         self.cursorPoints = []
         self.comments = {}
 
-    def searchAndMark(self, tableName, rgbColor=None):
+        self.category = None
+
+    def searchAndMark(self):
         self.textDemark()
 
         allRegex = None
@@ -25,7 +26,7 @@ class Searcher:
             with open('categories', encoding='utf-8') as f:
                 for value in f:
                     tableNameIns = value.split(';')
-                    if tableNameIns[0] == tableName:
+                    if tableNameIns[0] == self.category:
                         nameForTableLoad = tableNameIns[1].strip(' \n')
 
             if nameForTableLoad is not None:
@@ -69,3 +70,6 @@ class Searcher:
 
     def getComments(self):
         return self.comments
+
+    def setCategory(self, category):
+        self.category = category

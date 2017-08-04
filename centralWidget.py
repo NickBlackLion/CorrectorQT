@@ -18,15 +18,17 @@ class CentralWidget(QWidget):
         self.grid = QGridLayout(self)
         self.grid.addWidget(self.textArea)
 
+        self.categoryGrid = QVBoxLayout(self)
+
         self.__addCategoryMenu()
 
         self.setLayout(self.grid)
 
         self.se = Searcher(self)
         self.textArea.setSE(self.se)
+        self.textArea.setCategoryGrid(self.categoryGrid)
 
     def __addCategoryMenu(self):
-        categoryGrid = QVBoxLayout(self)
         with open('categories', encoding='utf-8') as f:
             for (index, word) in enumerate(f):
                 category = word.split(';')
@@ -34,12 +36,12 @@ class CentralWidget(QWidget):
                 categoryStripped = category[0].strip('\n')
                 categoryBox.setText(categoryStripped)
                 categoryBox.stateChanged.connect(lambda a, b=categoryStripped: self.makeSearch(a, b))
-                categoryGrid.addWidget(categoryBox)
+                self.categoryGrid.addWidget(categoryBox)
 
         spacer = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        categoryGrid.addItem(spacer)
+        self.categoryGrid.addItem(spacer)
 
-        self.grid.addLayout(categoryGrid, 0, 1, 1, 1)
+        self.grid.addLayout(self.categoryGrid, 0, 1, 1, 1)
 
     def getDocument(self):
         return self.doc
@@ -51,7 +53,8 @@ class CentralWidget(QWidget):
         return self.textArea
 
     def makeSearch(self, state, category):
+        self.se.setCategory(category)
         if state == Qt.Checked:
-            self.se.searchAndMark(category)
+            self.se.searchAndMark()
         else:
             self.se.textDemark()
