@@ -10,12 +10,68 @@ class Searcher:
 
         self.cursorPoints = []
         self.comments = {}
+        self.regexes = {}
 
         self.category = None
 
     def searchAndMark(self):
         self.textDemark()
 
+        allRegex = self.__loadedBase()
+
+        for val in allRegex:
+            index = 0
+
+            while index != -1:
+                regex = QRegExp(val[1])
+                font = self.textArea.textCursor().blockCharFormat().font()
+                cursor = self.doc.find(regex, index)
+
+                if cursor.position() != -1:
+                    boundary = (cursor.position() - len(cursor.selectedText()), cursor.position())
+                    self.comments[boundary] = val[2]
+                    self.cursorPoints.append(boundary)
+                    self.regexes[boundary] = cursor.selectedText()
+
+                cursor.insertHtml('<p style="background-color: #88B6FC; font-family: '
+                                                       + font.family() + '; font-size: ' + str(font.pointSize())
+                                                       + 'pt">' + cursor.selectedText() + "</p>")
+
+                index = cursor.position()
+
+    def textDemark(self):
+        text = self.textArea.toPlainText()
+        cursor = self.textArea.textCursor()
+        cursor.setPosition(3)
+        font = cursor.blockCharFormat().font()
+        self.textArea.clear()
+        cursor.insertHtml('<body style="font-family: ' + font.family() + '; font-size: ' + str(font.pointSize())
+                          + 'pt">' + text + '</body>')
+
+        self.cursorPoints.clear()
+
+    def selectedTextDemark(self, points):
+        word = self.regexes[points]
+        font = self.textArea.textCursor().blockCharFormat().font()
+        cursor = self.doc.find(word, points[0])
+
+        cursor.insertHtml('<p style="background-color: #ffffff; font-family: '
+                                + font.family() + '; font-size: ' + str(font.pointSize())
+                                + 'pt">' + cursor.selectedText() + "</p>")
+
+        self.cursorPoints.remove(points)
+        del self.comments[points]
+
+    def getCursorPoints(self):
+        return self.cursorPoints
+
+    def getComments(self):
+        return self.comments
+
+    def setCategory(self, category):
+        self.category = category
+
+    def __loadedBase(self):
         allRegex = None
         con = mdb.connect('localhost', 'root', 'root', 'Corrector', charset="utf8")
 
@@ -33,43 +89,4 @@ class Searcher:
                 cur.execute('select * from {0}'.format(nameForTableLoad))
                 allRegex = cur.fetchall()
 
-        for val in allRegex:
-            index = 0
-
-            while index != -1:
-                regex = QRegExp(val[1])
-                font = self.textArea.textCursor().blockCharFormat().font()
-                cursor = self.doc.find(regex, index)
-
-                if cursor.position() != -1:
-                    boundary = (cursor.position() - len(cursor.selectedText()), cursor.position())
-                    self.comments[boundary] = val[2]
-                    self.cursorPoints.append(boundary)
-
-                cursor.insertHtml('<p style="background-color: #88B6FC; font-family: '
-                                                       + font.family() + '; font-size: ' + str(font.pointSize())
-                                                       + 'pt">' + cursor.selectedText() + "</p>")
-
-                index = cursor.position()
-
-            print(self.cursorPoints)
-
-    def textDemark(self):
-        text = self.textArea.toPlainText()
-        cursor = self.textArea.textCursor()
-        cursor.setPosition(3)
-        font = cursor.blockCharFormat().font()
-        self.textArea.clear()
-        cursor.insertHtml('<body style="font-family: ' + font.family() + '; font-size: ' + str(font.pointSize())
-                          + 'pt">' + text + '</body>')
-
-        self.cursorPoints.clear()
-
-    def getCursorPoints(self):
-        return self.cursorPoints
-
-    def getComments(self):
-        return self.comments
-
-    def setCategory(self, category):
-        self.category = category
+        return allRegex

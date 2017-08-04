@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
             with open('categories', encoding='utf-8') as f:
                 for value in f:
                     val = value.split(';')
-                    cur.execute("create table {0}(Id int PRIMARY KEY AUTO_INCREMENT, regex VARCHAR(255), comment VARCHAR(255));".format(val[1].strip(' \n')))
+                    cur.execute("create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT, regex VARCHAR(255), comment VARCHAR(255));".format(val[1].strip(' \n')))
         except mdb.Error:
             print('Tables already exist')
 

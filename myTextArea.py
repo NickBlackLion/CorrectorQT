@@ -1,6 +1,5 @@
 from PyQt5.QtWidgets import QTextEdit, QToolTip
 from PyQt5.QtCore import QPoint, QTimer
-from PyQt5.QtGui import QTextCursor
 
 
 class TextArea(QTextEdit):
@@ -10,11 +9,18 @@ class TextArea(QTextEdit):
         self.se = None
         self.categoryGrid = None
 
+        self.textEditContainer = []
+
     def mousePressEvent(self, event):
         point = QPoint(event.x(), event.y())
         cursor = self.cursorForPosition(point)
-        font = font = cursor.blockCharFormat().font()
-        delPosition = None
+        font = cursor.blockCharFormat().font()
+
+        if len(self.textEditContainer) > 0:
+            for value in self.textEditContainer:
+                value.deleteLater()
+
+            self.textEditContainer.clear()
 
         for val in self.se.getCursorPoints():
             if val[0] < cursor.position() < val[1]:
@@ -23,14 +29,9 @@ class TextArea(QTextEdit):
                 textEdit.setMaximumWidth(300)
                 self.categoryGrid.addWidget(textEdit)
 
-                cursor.select(QTextCursor.WordUnderCursor)
+                self.se.selectedTextDemark(val)
 
-                cursor.insertHtml('<p style="background-color: #ffffff; font-family: '
-                                  + font.family() + '; font-size: ' + str(font.pointSize())
-                                  + 'pt">' + cursor.selectedText() + "</p>")
-
-                self.se.getCursorPoints().remove(val)
-                del self.se.getComments()[val]
+                self.textEditContainer.append(textEdit)
 
     def mouseMoveEvent(self, event):
         point = QPoint(event.x(), event.y())
