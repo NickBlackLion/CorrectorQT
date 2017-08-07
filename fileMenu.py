@@ -70,7 +70,7 @@ class FileMenu(QMenu):
         if self.fileName is not None and self.fileName[0]:
             doc = Document(self.fileName[0])
             for val in doc.paragraphs:
-                self.cursor.insertText(val.text)
+                self.cursor.insertText(val.text + '\n')
 
         self.doc.setModified(False)
         self.mainWindow.setWindowTitle(self.mainWindow.windowTitle() + '-' + self.fileName[0])

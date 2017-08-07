@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QSpinBox, QPushButton
 import sys
 import fileMenu, editMenu, specialMenu, centralWidget
-import MySQLdb as mdb
+import pymysql as mdb
+import shelve
+import os.path
 
 
 class MainWindow(QMainWindow):
@@ -12,13 +14,23 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('Корректор')
         self.app = app
 
+        with shelve.open('db_setup') as f:
+            if len(f) == 0:
+                f['host'] = 'localhost'
+                f['name'] = 'black'
+                f['password'] = 'blacky13'
+                f['db'] = 'Corrector'
+
         self.centralW = centralWidget.CentralWidget(self)
 
         self.__addCentralWidget()
         self.__addMenuBar()
         self.__addToolBar()
 
-        con = mdb.connect('localhost', 'root', 'root', 'Corrector')
+        con = None
+
+        with shelve.open('db_setup') as f:
+            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
 
         try:
             cur = con.cursor()

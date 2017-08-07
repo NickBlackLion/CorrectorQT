@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
     QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox
 import shelve
+import pymysql as mdb
 
 
 class SpecialWidget(QWidget):
@@ -10,8 +11,6 @@ class SpecialWidget(QWidget):
 
         self.resize(1100, 300)
         self.mainLayout = QHBoxLayout()
-        self.path = None
-        self.categories = []
 
         self.titles = ['Гласные', 'Согласные', 'Глухие согласные',
                        'Пробел', '"Другие буквы"', 'Удвоение', '"Или"', 'Любой символ', 'Цифра', 'Точка',
@@ -20,10 +19,6 @@ class SpecialWidget(QWidget):
         self.commandsArray = ['[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщ]', '[пхктшчсц]',
                               '\\s', '\\w+', '{2}', '|', '.', '[0-9]', '\.', '\\b', '\\b|\\b']
 
-        self.currentSymbol = None
-        self.count = 0
-
-        self.__loadCategories()
         self.__createTable()
         self.__createTextFilds()
         self.__createButtons()
@@ -35,7 +30,10 @@ class SpecialWidget(QWidget):
         layout1 = QHBoxLayout()
         self.box = QComboBox()
 
-        self.box.addItems(self.categories)
+        with open('categories', encoding='utf-8') as f:
+            for item in f:
+                itemList = item.split(';')
+                self.box.addItem(itemList[0])
 
         loadButton = QPushButton('Загрузить')
         loadButton.clicked.connect(lambda: self.__uploadDataToTable(self.box.currentText()))
@@ -50,6 +48,7 @@ class SpecialWidget(QWidget):
 
         self.mainLayout.addLayout(layout2)
 
+    # TODO добавить функции CRUD под нажатие кнопок
     def __createTextFilds(self):
         lab1 = QLabel('Шаблон поиска')
         lab2 = QLabel('Комментрий')
@@ -57,13 +56,17 @@ class SpecialWidget(QWidget):
         self.patternArea = QTextEdit()
         self.hintArea = QTextEdit()
 
+        self.createButton = QPushButton('Добавить')
+        # self.correctButton.clicked.connect(lambda: self.__updateDataInDB())
         self.correctButton = QPushButton('Редактировать')
-        self.correctButton.clicked.connect(lambda: self.__updateDataInDB())
+        # self.correctButton.clicked.connect(lambda: self.__updateDataInDB())
         self.deleteButton = QPushButton('Удалить')
-        self.deleteButton.clicked.connect(lambda: self.__deleteFromDB())
+        # self.deleteButton.clicked.connect(lambda: self.__deleteFromDB())
         self.cancelButton = QPushButton('Отменить')
+        # self.deleteButton.clicked.connect(lambda: self.__deleteFromDB())
 
         buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.createButton)
         buttonLayout.addWidget(self.correctButton)
         buttonLayout.addWidget(self.deleteButton)
         buttonLayout.addWidget(self.cancelButton)
@@ -87,101 +90,54 @@ class SpecialWidget(QWidget):
         self.mainLayout.addLayout(layout)
 
     def __takeStrings(self, mark):
+        print('__takeStrings')
         self.patternArea.insertPlainText(mark)
 
-    def __loadCategories(self):
-        with open('categories', encoding='utf-8') as f:
-            for value in f:
-                self.categories.append(value)
+    def __loadData(self, categoryName):
+        allRegex = None
 
-    def __loadData(self, endOfPath):
-        with open('pathways', encoding='utf-8') as f:
-            self.path = f.readline()
+        con = None
 
-        self.path = self.path.strip('\n') + '//' + endOfPath.strip('\n') + '//' + endOfPath.strip('\n')
+        with shelve.open('db_setup') as f:
+            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
 
-        f = None
-        try:
-            f = shelve.open(self.path)
-            self.count = len(f)
-        except Exception:
-            self.table.clear()
-        finally:
-            if f is not None:
-                f.close()
+        with con:
+            cur = con.cursor()
+            nameForTableLoad = None
 
-    def __uploadDataToTable(self, endOfPath):
-        self.__loadData(endOfPath)
+            with open('categories', encoding='utf-8') as f:
+                for value in f:
+                    tableNameIns = value.split(';')
+                    if tableNameIns[0] == categoryName:
+                        nameForTableLoad = tableNameIns[1].strip(' \n')
 
-        self.table.setColumnCount(2)
-        self.table.setRowCount(self.count)
+            if nameForTableLoad is not None:
+                cur.execute('select * from {0}'.format(nameForTableLoad))
+                allRegex = cur.fetchall()
 
-        if self.count == 0:
-            QMessageBox.information(self, 'Інфо', 'База порожня')
+        return allRegex
 
-        f = None
-        try:
-            f = shelve.open(self.path)
+    def __uploadDataToTable(self, categoryName):
+        data = self.__loadData(categoryName)
 
-            for num, index in enumerate(f):
-                self.table.setItem(num, 0, QTableWidgetItem(index))
-                self.table.setItem(num, 1, QTableWidgetItem(f[index]))
-        except Exception:
-            self.table.clear()
-        finally:
-            if f is not None:
-                f.close()
+        if len(data) == 0:
+            QMessageBox.information(self, 'Инфо', 'База данных пустая')
+            return
 
-        self.table.setHorizontalHeaderLabels(('Шаблон', 'Комментарий'))
+        self.table.setColumnCount(len(data[0]))
+        self.table.setRowCount(len(data))
+
+        for table_row_index, table_row in enumerate(data):
+            for table_column_index, table_cell_value in enumerate(table_row):
+                self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
+
+        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
         self.table.itemClicked.connect(lambda: self.__setDataToAreas())
 
     def __setDataToAreas(self):
         for i in self.table.selectedItems():
             if i.column() == 0:
                 self.patternArea.clear()
-                self.patternArea.append(i.text())
-                self.currentSymbol = i.text()
+                self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text())
                 self.hintArea.clear()
-                self.hintArea.append(self.table.item(i.row(), (i.column()+1)).text())
-
-    def __deleteFromDB(self, updateFlag=False):
-        print(self.currentSymbol)
-        if self.path is not None and self.currentSymbol is not None:
-            print('is not None', self.currentSymbol)
-            f = None
-            try:
-                f = shelve.open(self.path)
-                del f[self.currentSymbol]
-                self.__uploadDataToTable(self.box.currentText())
-                self.patternArea.clear()
-                self.hintArea.clear()
-            except Exception:
-                self.table.clear()
-            finally:
-                if f is not None:
-                    f.close()
-                self.currentSymbol = None
-        elif not updateFlag:
-            QMessageBox.information(self, 'Ошибка работы с базой', 'Загрузить базу или выберите шаблон для работы')
-
-    def __updateDataInDB(self):
-        if self.path is not None and self.currentSymbol is not None:
-            try:
-                f = shelve.open(self.path)
-                print(f)
-                f[self.patternArea.toPlainText().lower()] = self.hintArea.toPlainText()
-                self.__uploadDataToTable(self.box.currentText())
-
-                if self.currentSymbol != self.patternArea.toPlainText():
-                    self.__deleteFromDB(True)
-
-                self.patternArea.clear()
-                self.hintArea.clear()
-            except Exception:
-                print('exception in __updateDataInDB')
-            finally:
-                if f is not None:
-                    f.close()
-                self.currentSymbol = None
-        else:
-            QMessageBox.information(self, 'Ошибка работы с базой', 'Загрузить базу или выберите шаблон для работы')
+                self.hintArea.append(self.table.item(i.row(), (i.column()+2)).text())

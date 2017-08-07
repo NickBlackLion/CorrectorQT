@@ -1,5 +1,7 @@
-import MySQLdb as mdb
+import pymysql as mdb
 from PyQt5.QtCore import QRegExp
+import shelve
+import os.path
 
 
 class Searcher:
@@ -73,7 +75,10 @@ class Searcher:
 
     def __loadedBase(self):
         allRegex = None
-        con = mdb.connect('localhost', 'root', 'root', 'Corrector', charset="utf8")
+
+        con = None
+        with shelve.open('db_setup') as f:
+            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
 
         with con:
             cur = con.cursor()

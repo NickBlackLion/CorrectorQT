@@ -33,6 +33,8 @@ class TextArea(QTextEdit):
 
                 self.textEditContainer.append(textEdit)
 
+        self.setTextCursor(cursor)
+
     def mouseMoveEvent(self, event):
         point = QPoint(event.x(), event.y())
         cursor = self.cursorForPosition(point)
