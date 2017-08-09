@@ -23,6 +23,8 @@ class SpecialWidget(QWidget):
         self.__createTextFilds()
         self.__createButtons()
 
+        self.id = None
+
         self.setLayout(self.mainLayout)
         self.show()
 
@@ -57,13 +59,13 @@ class SpecialWidget(QWidget):
         self.hintArea = QTextEdit()
 
         self.createButton = QPushButton('Добавить')
-        # self.correctButton.clicked.connect(lambda: self.__updateDataInDB())
+        self.createButton.clicked.connect(lambda: self.__insertDataToDB(self.box.currentText()))
         self.correctButton = QPushButton('Редактировать')
-        # self.correctButton.clicked.connect(lambda: self.__updateDataInDB())
+        self.correctButton.clicked.connect(lambda: self.__updateDataInRow(self.box.currentText()))
         self.deleteButton = QPushButton('Удалить')
-        # self.deleteButton.clicked.connect(lambda: self.__deleteFromDB())
+        self.deleteButton.clicked.connect(lambda: self.__deleteDataFromTable(self.box.currentText()))
         self.cancelButton = QPushButton('Отменить')
-        # self.deleteButton.clicked.connect(lambda: self.__deleteFromDB())
+        # self.cancelButton.clicked.connect(lambda: self.__deleteFromDB())
 
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.createButton)
@@ -90,30 +92,13 @@ class SpecialWidget(QWidget):
         self.mainLayout.addLayout(layout)
 
     def __takeStrings(self, mark):
-        print('__takeStrings')
         self.patternArea.insertPlainText(mark)
 
     def __loadData(self, categoryName):
-        allRegex = None
+        connectionData = self.__connectionToDB(categoryName)
 
-        con = None
-
-        with shelve.open('db_setup') as f:
-            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
-
-        with con:
-            cur = con.cursor()
-            nameForTableLoad = None
-
-            with open('categories', encoding='utf-8') as f:
-                for value in f:
-                    tableNameIns = value.split(';')
-                    if tableNameIns[0] == categoryName:
-                        nameForTableLoad = tableNameIns[1].strip(' \n')
-
-            if nameForTableLoad is not None:
-                cur.execute('select * from {0}'.format(nameForTableLoad))
-                allRegex = cur.fetchall()
+        connectionData[1].execute('select * from {0}'.format(connectionData[2]))
+        allRegex = connectionData[1].fetchall()
 
         return allRegex
 
@@ -134,10 +119,79 @@ class SpecialWidget(QWidget):
         self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
         self.table.itemClicked.connect(lambda: self.__setDataToAreas())
 
+        self.patternArea.clear()
+        self.hintArea.clear()
+
     def __setDataToAreas(self):
         for i in self.table.selectedItems():
             if i.column() == 0:
+                self.id = self.table.item(i.row(), i.column()).text()
                 self.patternArea.clear()
                 self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text())
                 self.hintArea.clear()
                 self.hintArea.append(self.table.item(i.row(), (i.column()+2)).text())
+
+    def __insertDataToDB(self, tableName):
+        connectionData = self.__connectionToDB(tableName)
+
+        if self.patternArea.toPlainText() != '':
+            mysql = "insert into `{0}` SET `regex`='{1}', `comment` = '{2}'".format(connectionData[2],
+                                                                                    self.patternArea.toPlainText(),
+                                                                                    self.hintArea.toPlainText())
+            connectionData[1].execute(mysql)
+            connectionData[0].commit()
+
+            self.__uploadDataToTable(tableName)
+        else:
+            QMessageBox.information(self, 'Инфо', 'Добавьте регекс для внесения в базу данных')
+
+    def __updateDataInRow(self, tableName):
+        connectionData = self.__connectionToDB(tableName)
+
+        if self.id is not None:
+            mysql = "UPDATE `{0}` SET `regex`='{1}', `comment` = '{2}' WHERE `Id` = {3}".format(connectionData[2],
+                                                                                                self.patternArea.toPlainText(),
+                                                                                                self.hintArea.toPlainText(),
+                                                                                                self.id)
+
+            connectionData[1].execute(mysql)
+            connectionData[0].commit()
+
+            self.__uploadDataToTable(tableName)
+            self.id = None
+        else:
+            QMessageBox.information(self, 'Инфо', 'Выберите строку для изменения')
+
+    def __deleteDataFromTable(self, tableName):
+        connectionData = self.__connectionToDB(tableName)
+
+        if self.id is not None:
+            dialog = QMessageBox.question(self, 'Удаление', 'Вы действительно хотите удалить запись?')
+            if dialog == QMessageBox.Yes:
+                mysql = "DELETE FROM `{0}` WHERE `Id` = {1}".format(connectionData[2], self.id)
+
+                connectionData[1].execute(mysql)
+                connectionData[0].commit()
+
+                self.__uploadDataToTable(tableName)
+                self.id = None
+        else:
+            QMessageBox.information(self, 'Инфо', 'Выберите строку для удаления')
+
+    def __connectionToDB(self, tableName):
+        con = None
+        nameForTableLoad = ''
+
+        with shelve.open('db_setup') as f:
+            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
+
+        with con:
+            cur = con.cursor()
+
+            with open('categories', encoding='utf-8') as f:
+                for value in f:
+                    tableNameIns = value.split(';')
+                    if tableNameIns[0] == tableName:
+                        nameForTableLoad = tableNameIns[1].strip(' \n')
+
+        return con, cur, nameForTableLoad
