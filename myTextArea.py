@@ -34,6 +34,7 @@ class TextArea(QTextEdit):
                 self.textEditContainer.append(textEdit)
 
         self.setTextCursor(cursor)
+        QTextEdit.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
         point = QPoint(event.x(), event.y())
@@ -46,6 +47,8 @@ class TextArea(QTextEdit):
                 hint += self.se.getComments()[val] + '\n'
                 QToolTip.showText(event.globalPos(), hint)
                 timer.singleShot(1500, QToolTip.hideText)
+
+        QTextEdit.mouseMoveEvent(self, event)
 
     def setSE(self, se):
         self.se = se

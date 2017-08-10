@@ -64,6 +64,7 @@ class FileMenu(QMenu):
     def __open(self):
         self.__saveIfChanged(self.__openFunction)
 
+    # TODO подумать как лучше поступить с таблицей
     def __openFunction(self):
         self.fileName = QFileDialog.getOpenFileName(self.parent, '', '', "Document Microsoft Word (*.docx)")
 

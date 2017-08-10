@@ -17,7 +17,7 @@ class SpecialWidget(QWidget):
                        'Граница слова', 'Граница слова \n-Или-\n Граница слова']
 
         self.commandsArray = ['[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщ]', '[пхктшчсц]',
-                              '\\s', '\\w+', '{2}', '|', '.', '[0-9]', '\.', '\\b', '\\b|\\b']
+                              '\\\\s', '\\\\w+', '{2}', '|', '.', '[0-9]', '\\.', '\\\\b', '\\\\b|\\\\b']
 
         self.__createTable()
         self.__createTextFilds()
@@ -50,7 +50,6 @@ class SpecialWidget(QWidget):
 
         self.mainLayout.addLayout(layout2)
 
-    # TODO добавить функции CRUD под нажатие кнопок
     def __createTextFilds(self):
         lab1 = QLabel('Шаблон поиска')
         lab2 = QLabel('Комментрий')
@@ -65,7 +64,7 @@ class SpecialWidget(QWidget):
         self.deleteButton = QPushButton('Удалить')
         self.deleteButton.clicked.connect(lambda: self.__deleteDataFromTable(self.box.currentText()))
         self.cancelButton = QPushButton('Отменить')
-        # self.cancelButton.clicked.connect(lambda: self.__deleteFromDB())
+        self.cancelButton.clicked.connect(lambda: self.__cancelAction())
 
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.createButton)
@@ -107,6 +106,7 @@ class SpecialWidget(QWidget):
 
         if len(data) == 0:
             QMessageBox.information(self, 'Инфо', 'База данных пустая')
+            self.table.clear()
             return
 
         self.table.setColumnCount(len(data[0]))
@@ -142,6 +142,8 @@ class SpecialWidget(QWidget):
             connectionData[0].commit()
 
             self.__uploadDataToTable(tableName)
+            self.patternArea.cursor()
+            self.hintArea.clear()
         else:
             QMessageBox.information(self, 'Инфо', 'Добавьте регекс для внесения в базу данных')
 
@@ -159,6 +161,8 @@ class SpecialWidget(QWidget):
 
             self.__uploadDataToTable(tableName)
             self.id = None
+            self.patternArea.cursor()
+            self.hintArea.clear()
         else:
             QMessageBox.information(self, 'Инфо', 'Выберите строку для изменения')
 
@@ -175,8 +179,15 @@ class SpecialWidget(QWidget):
 
                 self.__uploadDataToTable(tableName)
                 self.id = None
+                self.patternArea.cursor()
+                self.hintArea.clear()
         else:
             QMessageBox.information(self, 'Инфо', 'Выберите строку для удаления')
+
+    def __cancelAction(self):
+        self.patternArea.clear()
+        self.hintArea.clear()
+        self.id = None
 
     def __connectionToDB(self, tableName):
         con = None
