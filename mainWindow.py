@@ -1,9 +1,8 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QSpinBox, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QPushButton
 import sys
 import fileMenu, editMenu, specialMenu, centralWidget
 import pymysql as mdb
 import shelve
-import os.path
 
 
 class MainWindow(QMainWindow):
@@ -45,7 +44,7 @@ class MainWindow(QMainWindow):
 
     def __addMenuBar(self):
         mainMenu = self.menuBar()
-        fileMenu.FileMenu(app, self, mainMenu, self.centralW)
+        self.fileMenu = fileMenu.FileMenu(app, self, mainMenu, self.centralW)
         editMenu.EditMenu(app, mainMenu, self.centralW)
         specialMenu.SpecialMenu(mainMenu, self.centralW)
 
@@ -108,6 +107,13 @@ class MainWindow(QMainWindow):
         else:
             cursor.insertHtml('<p style="font-weight: normal; font-family: ' + font.family()
                               + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+    def closeEvent(self, QCloseEvent):
+        flag = self.fileMenu.saveIfChanged()
+        if flag:
+            QMainWindow.closeEvent(self, QCloseEvent)
+        else:
+            QCloseEvent.ignore()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -38,8 +38,10 @@ class CentralWidget(QWidget):
                 categoryBox.stateChanged.connect(lambda a, b=categoryStripped: self.makeSearch(a, b))
                 self.categoryGrid.addWidget(categoryBox)
 
-        spacer = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.categoryGrid.addItem(spacer)
+        spacerV = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacerH = QSpacerItem(350, 1, QSizePolicy.Fixed, QSizePolicy.Minimum)
+        self.categoryGrid.addItem(spacerV)
+        self.categoryGrid.addItem(spacerH)
 
         self.grid.addLayout(self.categoryGrid, 0, 1, 1, 1)
 

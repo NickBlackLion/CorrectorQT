@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
-    QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox
+QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox, QLineEdit
+from PyQt5.QtCore import QTimer, Qt
 import shelve
 import pymysql as mdb
 
@@ -23,7 +24,14 @@ class SpecialWidget(QWidget):
         self.__createTextFilds()
         self.__createButtons()
 
+        self.dataInTable = None
         self.id = None
+        self.foundItem = None
+        self.counter = 0
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.__ifPresentInDB)
+        self.timer.start(50)
 
         self.setLayout(self.mainLayout)
         self.show()
@@ -43,9 +51,23 @@ class SpecialWidget(QWidget):
         layout1.addWidget(self.box)
         layout1.addWidget(loadButton)
 
+        findLayout = QHBoxLayout()
+        findLine = QLineEdit()
+
+        findButton = QPushButton('Найти')
+        findButton.clicked.connect(lambda: self.__searchInTable(findLine.text()))
+
+        findNext = QPushButton('Найти далее...')
+        findNext.clicked.connect(lambda: self.__searchNextInTable())
+
+        findLayout.addWidget(findLine)
+        findLayout.addWidget(findButton)
+        findLayout.addWidget(findNext)
+
         self.table = QTableWidget()
         layout2 = QVBoxLayout()
         layout2.addLayout(layout1)
+        layout2.addLayout(findLayout)
         layout2.addWidget(self.table)
 
         self.mainLayout.addLayout(layout2)
@@ -53,6 +75,9 @@ class SpecialWidget(QWidget):
     def __createTextFilds(self):
         lab1 = QLabel('Шаблон поиска')
         lab2 = QLabel('Комментрий')
+
+        self.isInDBLab = QLabel('Регекс отсутствует в базе')
+        self.isInDBLab.setStyleSheet('QLabel {color: green}')
 
         self.patternArea = QTextEdit()
         self.hintArea = QTextEdit()
@@ -74,6 +99,7 @@ class SpecialWidget(QWidget):
 
         layout = QVBoxLayout()
         layout.addWidget(lab1)
+        layout.addWidget(self.isInDBLab)
         layout.addWidget(self.patternArea)
         layout.addWidget(lab2)
         layout.addWidget(self.hintArea)
@@ -102,17 +128,17 @@ class SpecialWidget(QWidget):
         return allRegex
 
     def __uploadDataToTable(self, categoryName):
-        data = self.__loadData(categoryName)
+        self.dataInTable = self.__loadData(categoryName)
 
-        if len(data) == 0:
+        if len(self.dataInTable) == 0:
             QMessageBox.information(self, 'Инфо', 'База данных пустая')
             self.table.clear()
             return
 
-        self.table.setColumnCount(len(data[0]))
-        self.table.setRowCount(len(data))
+        self.table.setColumnCount(len(self.dataInTable[0]))
+        self.table.setRowCount(len(self.dataInTable))
 
-        for table_row_index, table_row in enumerate(data):
+        for table_row_index, table_row in enumerate(self.dataInTable):
             for table_column_index, table_cell_value in enumerate(table_row):
                 self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
 
@@ -206,3 +232,28 @@ class SpecialWidget(QWidget):
                         nameForTableLoad = tableNameIns[1].strip(' \n')
 
         return con, cur, nameForTableLoad
+
+    def __ifPresentInDB(self):
+        if self.dataInTable is not None:
+            for value in self.dataInTable:
+                fromPatternArea = self.patternArea.toPlainText().replace('\\\\', '\\')
+                if fromPatternArea == value[1]:
+                    self.isInDBLab.setText('Регекс есть в базе')
+                    self.isInDBLab.setStyleSheet('QLabel {color: red}')
+                else:
+                    self.isInDBLab.setText('Регекс отсутствует в базе')
+                    self.isInDBLab.setStyleSheet('QLabel {color: green}')
+
+    def __searchInTable(self, text):
+        self.foundItem = self.table.findItems(text, Qt.MatchExactly)
+        if len(self.foundItem) > 0:
+            self.table.setCurrentCell(self.foundItem[0].row(), self.foundItem[0].column())
+            self.counter = 1
+
+    def __searchNextInTable(self):
+        if self.foundItem is not None:
+            if self.counter == len(self.foundItem):
+                return
+
+            self.table.setCurrentCell(self.foundItem[self.counter].row(), self.foundItem[self.counter].column())
+            self.counter += 1

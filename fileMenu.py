@@ -62,7 +62,7 @@ class FileMenu(QMenu):
         self.addAction(self.exitAction)
 
     def __open(self):
-        self.__saveIfChanged(self.__openFunction)
+        self.saveIfChanged(self.__openFunction)
 
     # TODO подумать как лучше поступить с таблицей
     def __openFunction(self):
@@ -83,10 +83,10 @@ class FileMenu(QMenu):
             self.__addToDocx()
 
     def __new(self):
-        self.__saveIfChanged(isNewFunction=True)
+        self.saveIfChanged()
 
     def __exit(self):
-        self.__saveIfChanged(self.__exitFunction)
+        self.saveIfChanged(self.__exitFunction)
 
     def __exitFunction(self):
         self.app.quit()
@@ -101,30 +101,37 @@ class FileMenu(QMenu):
 
         return hex(info.exec_())
 
-    def __saveIfChanged(self, function=None, isNewFunction=False):
+    def saveIfChanged(self, function=None):
         if self.doc.isModified():
             retval = self.__message('Изменение текста', 'Файл изменен', 'Вы хотите сохранить изменения')
             if retval == hex(0x10000):
+                print('hex(0x10000)')
                 self.doc.clear()
                 self.doc.setModified(False)
                 self.mainWindow.setWindowTitle('Корректор')
                 self.fileName = None
                 self.star = False
-                if not isNewFunction:
+                if function is not None:
                     function()
+                return True
             elif retval == hex(0x4000):
+                print('hex(0x4000)')
                 self.__save()
-                if not isNewFunction:
+                if function is not None:
                     function()
+                return True
             elif retval == hex(0x400000):
-                return
+                print('hex(0x400000)')
+                return False
         else:
+            print('else')
             self.doc.clear()
             self.doc.setModified(False)
             self.mainWindow.setWindowTitle('Корректор')
             self.fileName = None
-            if not isNewFunction:
+            if function is not None:
                 function()
+            return True
 
     def __save(self):
         if self.fileName is not None and self.fileName[0]:
@@ -135,9 +142,12 @@ class FileMenu(QMenu):
     def __addToDocx(self):
         doc = Document()
         for val in self.doc.toPlainText().split('\n'):
-            doc.add_paragraph(val)
+            doc.add_paragraph(val + '\n')
 
-        doc.save(self.fileName[0])
+        fileName = self.fileName[0].strip('.docx')
+        print(fileName)
+
+        doc.save(fileName + '.docx')
         self.doc.setModified(False)
         self.star = False
         self.mainWindow.setWindowTitle('Корректор' + '-' + self.fileName[0])
