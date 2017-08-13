@@ -153,7 +153,7 @@ class SpecialWidget(QWidget):
             if i.column() == 0:
                 self.id = self.table.item(i.row(), i.column()).text()
                 self.patternArea.clear()
-                self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text())
+                self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text().replace('\\', '\\\\'))
                 self.hintArea.clear()
                 self.hintArea.append(self.table.item(i.row(), (i.column()+2)).text())
 
@@ -170,6 +170,7 @@ class SpecialWidget(QWidget):
             self.__uploadDataToTable(tableName)
             self.patternArea.cursor()
             self.hintArea.clear()
+            self.id = None
         else:
             QMessageBox.information(self, 'Инфо', 'Добавьте регекс для внесения в базу данных')
 
@@ -240,6 +241,7 @@ class SpecialWidget(QWidget):
                 if fromPatternArea == value[1]:
                     self.isInDBLab.setText('Регекс есть в базе')
                     self.isInDBLab.setStyleSheet('QLabel {color: red}')
+                    return
                 else:
                     self.isInDBLab.setText('Регекс отсутствует в базе')
                     self.isInDBLab.setStyleSheet('QLabel {color: green}')
