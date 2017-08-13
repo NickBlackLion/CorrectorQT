@@ -16,8 +16,8 @@ class MainWindow(QMainWindow):
         with shelve.open('db_setup') as f:
             if len(f) == 0:
                 f['host'] = 'localhost'
-                f['name'] = 'black'
-                f['password'] = 'blacky13'
+                f['name'] = 'root'
+                f['password'] = 'root'
                 f['db'] = 'Corrector'
 
         self.centralW = centralWidget.CentralWidget(self)

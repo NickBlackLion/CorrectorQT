@@ -133,6 +133,8 @@ class SpecialWidget(QWidget):
         if len(self.dataInTable) == 0:
             QMessageBox.information(self, 'Инфо', 'База данных пустая')
             self.table.clear()
+            self.isInDBLab.setText('Регекс отсутствует в базе')
+            self.isInDBLab.setStyleSheet('QLabel {color: green}')
             return
 
         self.table.setColumnCount(len(self.dataInTable[0]))
@@ -168,9 +170,7 @@ class SpecialWidget(QWidget):
             connectionData[0].commit()
 
             self.__uploadDataToTable(tableName)
-            self.patternArea.cursor()
-            self.hintArea.clear()
-            self.id = None
+            self.__cancelAction()
         else:
             QMessageBox.information(self, 'Инфо', 'Добавьте регекс для внесения в базу данных')
 
@@ -187,9 +187,7 @@ class SpecialWidget(QWidget):
             connectionData[0].commit()
 
             self.__uploadDataToTable(tableName)
-            self.id = None
-            self.patternArea.cursor()
-            self.hintArea.clear()
+            self.__cancelAction()
         else:
             QMessageBox.information(self, 'Инфо', 'Выберите строку для изменения')
 
@@ -205,9 +203,7 @@ class SpecialWidget(QWidget):
                 connectionData[0].commit()
 
                 self.__uploadDataToTable(tableName)
-                self.id = None
-                self.patternArea.cursor()
-                self.hintArea.clear()
+                self.__cancelAction()
         else:
             QMessageBox.information(self, 'Инфо', 'Выберите строку для удаления')
 
