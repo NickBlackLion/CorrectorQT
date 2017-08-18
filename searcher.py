@@ -1,7 +1,7 @@
 import pymysql as mdb
 from PyQt5.QtCore import QRegExp
+from PyQt5.Qt import Qt
 import shelve
-import re
 
 
 class Searcher:
@@ -18,20 +18,12 @@ class Searcher:
 
     def searchAndMark(self):
         allRegex = self.__loadedBase()
-        text = self.textArea.toPlainText()
 
         for val in allRegex:
             index = 0
-            word = ''
 
             while index != -1:
-                reg = re.search(val[1], text, re.IGNORECASE)
-
-                if reg is not None:
-                    word = text[reg.start():reg.end()]
-                    text = text[reg.end():]
-
-                regex = QRegExp(word)
+                regex = QRegExp(val[1], Qt.CaseInsensitive)
                 font = self.textArea.textCursor().blockCharFormat().font()
                 cursor = self.doc.find(regex, index)
 
@@ -49,20 +41,12 @@ class Searcher:
 
     def textDemark(self):
         allRegex = self.__loadedBase()
-        text = self.textArea.toPlainText()
 
         for val in allRegex:
             index = 0
-            word = ''
 
             while index != -1:
-                reg = re.search(val[1], text, re.IGNORECASE)
-
-                if reg is not None:
-                    word = text[reg.start():reg.end()]
-                    text = text[reg.end():]
-
-                regex = QRegExp(word)
+                regex = QRegExp(val[1], Qt.CaseInsensitive)
                 font = self.textArea.textCursor().blockCharFormat().font()
                 cursor = self.doc.find(regex, index)
 
