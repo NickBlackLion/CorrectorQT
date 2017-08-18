@@ -1,7 +1,7 @@
 import pymysql as mdb
 from PyQt5.QtCore import QRegExp
 import shelve
-import os.path
+import re
 
 
 class Searcher:
@@ -17,15 +17,21 @@ class Searcher:
         self.category = None
 
     def searchAndMark(self):
-        self.textDemark()
-
         allRegex = self.__loadedBase()
+        text = self.textArea.toPlainText()
 
         for val in allRegex:
             index = 0
+            word = ''
 
             while index != -1:
-                regex = QRegExp(val[1])
+                reg = re.search(val[1], text, re.IGNORECASE)
+
+                if reg is not None:
+                    word = text[reg.start():reg.end()]
+                    text = text[reg.end():]
+
+                regex = QRegExp(word)
                 font = self.textArea.textCursor().blockCharFormat().font()
                 cursor = self.doc.find(regex, index)
 
@@ -42,13 +48,29 @@ class Searcher:
                 index = cursor.position()
 
     def textDemark(self):
+        allRegex = self.__loadedBase()
         text = self.textArea.toPlainText()
-        cursor = self.textArea.textCursor()
-        cursor.setPosition(3)
-        font = cursor.blockCharFormat().font()
-        self.textArea.clear()
-        cursor.insertHtml('<body style="font-family: ' + font.family() + '; font-size: ' + str(font.pointSize())
-                          + 'pt">' + text + '</body>')
+
+        for val in allRegex:
+            index = 0
+            word = ''
+
+            while index != -1:
+                reg = re.search(val[1], text, re.IGNORECASE)
+
+                if reg is not None:
+                    word = text[reg.start():reg.end()]
+                    text = text[reg.end():]
+
+                regex = QRegExp(word)
+                font = self.textArea.textCursor().blockCharFormat().font()
+                cursor = self.doc.find(regex, index)
+
+                cursor.insertHtml('<p style="background-color: #ffffff; font-family: '
+                                  + font.family() + '; font-size: ' + str(font.pointSize())
+                                  + 'pt">' + cursor.selectedText() + "</p>")
+
+                index = cursor.position()
 
         self.cursorPoints.clear()
 
