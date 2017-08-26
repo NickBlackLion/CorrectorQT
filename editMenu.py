@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMenu, QAction
 
 
 class EditMenu(QMenu):
+    """Class that provides standard functions like: cut, copy, paste, find"""
     def __init__(self, app, parent, centralW):
         QMenu.__init__(self, parent)
         self.setTitle('Правка')

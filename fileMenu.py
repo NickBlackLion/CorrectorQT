@@ -4,6 +4,7 @@ from docx import Document
 
 
 class FileMenu(QMenu):
+    """Class that provides standard functions to save and to open files"""
     def __init__(self, app, mainWindow, parent, centralW):
         QMenu.__init__(self, parent)
 
@@ -64,7 +65,6 @@ class FileMenu(QMenu):
     def __open(self):
         self.saveIfChanged(self.__openFunction)
 
-    # TODO подумать как лучше поступить с таблицей
     def __openFunction(self):
         self.fileName = QFileDialog.getOpenFileName(self.parent, '', '', "Document Microsoft Word (*.docx)")
 
@@ -105,7 +105,6 @@ class FileMenu(QMenu):
         if self.doc.isModified():
             retval = self.__message('Изменение текста', 'Файл изменен', 'Вы хотите сохранить изменения')
             if retval == hex(0x10000):
-                print('hex(0x10000)')
                 self.doc.clear()
                 self.doc.setModified(False)
                 self.mainWindow.setWindowTitle('Корректор')
@@ -115,13 +114,11 @@ class FileMenu(QMenu):
                     function()
                 return True
             elif retval == hex(0x4000):
-                print('hex(0x4000)')
                 self.__save()
                 if function is not None:
                     function()
                 return True
             elif retval == hex(0x400000):
-                print('hex(0x400000)')
                 return False
         else:
             print('else')

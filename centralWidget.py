@@ -6,6 +6,7 @@ from myTextArea import TextArea
 
 
 class CentralWidget(QWidget):
+    """Class is used for creating main filler of the central widget"""
     def __init__(self, parent):
         QWidget.__init__(self, parent)
         self.textArea = TextArea()
@@ -29,6 +30,7 @@ class CentralWidget(QWidget):
         self.textArea.setCategoryGrid(self.categoryGrid)
 
     def __addCategoryMenu(self):
+        """Method that filled right side of the main window with categories check boxes"""
         with open('categories', encoding='utf-8') as f:
             for (index, word) in enumerate(f):
                 category = word.split(';')
@@ -55,6 +57,8 @@ class CentralWidget(QWidget):
         return self.textArea
 
     def makeSearch(self, state, category):
+        """Method that marks all words and word expressions in the text
+        if on of category is selected and unmarks if category is not selected"""
         self.se.setCategory(category)
         if state == Qt.Checked:
             self.se.searchAndMark()

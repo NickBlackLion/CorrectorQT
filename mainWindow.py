@@ -6,6 +6,7 @@ import shelve
 
 
 class MainWindow(QMainWindow):
+    """Class that makes main window with all fillers"""
     def __init__(self, app):
         QMainWindow.__init__(self)
         self.resize(1000, 500)
@@ -36,7 +37,8 @@ class MainWindow(QMainWindow):
             with open('categories', encoding='utf-8') as f:
                 for value in f:
                     val = value.split(';')
-                    cur.execute("create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT, regex VARCHAR(255), comment VARCHAR(255));".format(val[1].strip(' \n')))
+                    cur.execute("""create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT,
+                                regex VARCHAR(255), comment VARCHAR(255));""".format(val[1].strip(' \n')))
         except mdb.Error:
             print('Tables already exist')
 
@@ -67,9 +69,11 @@ class MainWindow(QMainWindow):
 
         kButton = QPushButton('K', toolBar)
         kButton.setStyleSheet("QPushButton {font-style: italic}")
+        kButton.clicked.connect(self.__changeTextStyle)
 
         iButton = QPushButton('I', toolBar)
         iButton.setStyleSheet("QPushButton {text-decoration: underline}")
+        iButton.clicked.connect(self.__changeTextDecoration)
 
         toolBar.addWidget(self.fontFamily)
         toolBar.addWidget(self.fontSize)
@@ -101,12 +105,124 @@ class MainWindow(QMainWindow):
         cursor = self.centralW.getTextArea().textCursor()
         text = cursor.selectedText()
         font = cursor.charFormat().font()
-        if not font.bold():
+        if not font.bold() and not font.italic() and not font.underline():
             cursor.insertHtml('<p style="font-weight: bold; font-family: ' + font.family()
                               + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
-        else:
-            cursor.insertHtml('<p style="font-weight: normal; font-family: ' + font.family()
+
+        elif not font.bold() and font.italic() and not font.underline():
+            cursor.insertHtml('<p style="font-weight: bold; font-style: italic; font-family: ' + font.family()
                               + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif not font.bold() and not font.italic() and font.underline():
+            cursor.insertHtml('<p style="font-weight: bold; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif not font.bold() and font.italic() and font.underline():
+            cursor.insertHtml('<p style="font-weight: bold; font-style: italic; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.bold() and not font.italic() and not font.underline():
+            cursor.insertHtml('<p style="font-weight: normal;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.bold() and font.italic() and not font.underline():
+            cursor.insertHtml('<p style="font-weight: normal; font-style: italic; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif font.bold() and not font.italic() and font.underline():
+            cursor.insertHtml('<p style="font-weight: normal; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.bold() and font.italic() and font.underline():
+            cursor.insertHtml('<p style="font-weight: normal; font-style: italic; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+    def __changeTextStyle(self):
+        cursor = self.centralW.getTextArea().textCursor()
+        text = cursor.selectedText()
+        font = cursor.charFormat().font()
+        if not font.italic() and not font.bold() and not font.underline():
+            cursor.insertHtml('<p style="font-style: italic; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif not font.italic() and font.bold() and not font.underline():
+            cursor.insertHtml('<p style="font-weight: bold; font-style: italic; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif not font.italic() and not font.bold() and font.underline():
+            cursor.insertHtml('<p style="font-style: italic; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif not font.italic() and font.bold() and font.underline():
+            cursor.insertHtml('<p style="font-style: italic; font-weight: bold; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.italic() and not font.bold() and not font.underline():
+            cursor.insertHtml('<p style="font-style: normal;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.italic() and font.bold() and not font.underline():
+            cursor.insertHtml('<p style="font-style: normal; font-weight: bold; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif font.italic() and not font.bold() and font.underline():
+            cursor.insertHtml('<p style="font-style: normal; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.italic() and font.bold() and font.underline():
+            cursor.insertHtml('<p style="font-style: normal; font-weight: bold; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+    def __changeTextDecoration(self):
+        cursor = self.centralW.getTextArea().textCursor()
+        text = cursor.selectedText()
+        font = cursor.charFormat().font()
+        if not font.underline() and not font.bold() and not font.italic():
+            cursor.insertHtml('<p style="font-decoration: underline; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif not font.underline() and font.bold() and not font.italic():
+            cursor.insertHtml('<p style="font-decoration: underline; font-weight: bold; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif not font.underline() and not font.bold() and font.italic():
+            cursor.insertHtml('<p style="font-decoration: underline; font-style: italic;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif not font.underline() and font.bold() and font.italic():
+            cursor.insertHtml('<p style="text-decoration: underline; font-style: italic; font-weight: bold;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.underline() and not font.bold() and not font.italic():
+            cursor.insertHtml('<p style="text-decoration: none;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.underline() and font.bold() and not font.italic():
+            cursor.insertHtml('<p style="text-decoration: none; font-weight: bold; font-family: ' + font.family()
+                              + '; font-size: ' + str(font.pointSize()) + 'pt">' + text + '</p>')
+
+        elif font.underline() and not font.bold() and font.italic():
+            cursor.insertHtml('<p style="text-decoration: none; text-style: italic;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
+
+        elif font.underline() and font.bold() and font.italic():
+            cursor.insertHtml('<p style="text-decoration: none; font-weight: bold; text-decoration: underline;' +
+                              'font-family: ' + font.family() + '; font-size: ' + str(font.pointSize()) + 'pt">'
+                              + text + '</p>')
 
     def closeEvent(self, QCloseEvent):
         flag = self.fileMenu.saveIfChanged()

@@ -3,6 +3,7 @@ from PyQt5.QtCore import QPoint, QTimer
 
 
 class TextArea(QTextEdit):
+    """Class that implements QTextEdit class"""
     def __init__(self):
         QTextEdit.__init__(self)
         self.setMouseTracking(True)
@@ -11,7 +12,11 @@ class TextArea(QTextEdit):
 
         self.textEditContainer = []
 
+        self.setStyleSheet('QTextEdit {font-family: Segoe UI; font-size: 14pt;}')
+
     def mousePressEvent(self, event):
+        """Overrides native method and adds possibility
+        to show comments for selected word when click"""
         point = QPoint(event.x(), event.y())
         cursor = self.cursorForPosition(point)
         font = cursor.blockCharFormat().font()
@@ -37,6 +42,9 @@ class TextArea(QTextEdit):
         QTextEdit.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
+        """Overrides native method and adds possibility
+        to show comments for selected word when move mouse above
+        the word or expression"""
         point = QPoint(event.x(), event.y())
         cursor = self.cursorForPosition(point)
         hint = ''

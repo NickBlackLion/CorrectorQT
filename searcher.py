@@ -5,6 +5,7 @@ import shelve
 
 
 class Searcher:
+    """Class that makes searching through DB and highlight found concurrences"""
     def __init__(self, centralW):
         self.doc = centralW.getDocument()
         self.cursor = centralW.getCursor()
@@ -17,6 +18,7 @@ class Searcher:
         self.category = None
 
     def searchAndMark(self):
+        """Function that highlight all found concurrences"""
         allRegex = self.__loadedBase()
 
         for val in allRegex:
@@ -40,6 +42,7 @@ class Searcher:
                 index = cursor.position()
 
     def textDemark(self):
+        """Function that take off highlight for all found concurrences"""
         allRegex = self.__loadedBase()
 
         for val in allRegex:
@@ -59,6 +62,7 @@ class Searcher:
         self.cursorPoints.clear()
 
     def selectedTextDemark(self, points):
+        """Function that take off highlight for chose concurrence"""
         word = self.regexes[points]
         font = self.textArea.textCursor().blockCharFormat().font()
         cursor = self.doc.find(word, points[0])
@@ -80,6 +84,7 @@ class Searcher:
         self.category = category
 
     def __loadedBase(self):
+        """Function that loads and makes connection to DB"""
         allRegex = None
 
         con = None

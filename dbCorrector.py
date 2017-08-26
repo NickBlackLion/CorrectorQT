@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
-QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox, QLineEdit
+QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox, QLineEdit, QHeaderView
 from PyQt5.QtCore import QTimer, Qt
 import shelve
 import pymysql as mdb
 
 
 class SpecialWidget(QWidget):
+    """Class that creates new window in that you can work with database:
+    create, update and delete regex from DB"""
     def __init__(self):
         QWidget.__init__(self)
         self.setWindowTitle('Работа с базой данных')
@@ -18,9 +20,10 @@ class SpecialWidget(QWidget):
                        'Граница слова', 'Граница слова \n-Или-\n Граница слова']
 
         self.commandsArray = ['[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщ]', '[пхктшчсц]',
-                              '\\\\s', '\\\\w+', '{2}', '|', '.', '[0-9]', '\\.', '\\\\b', '\\\\b|\\\\b']
+                              '\\s', '\\w+', '{2}', '|', '.', '[0-9]', '\\.', '\\b', '\\b|\\b']
 
         self.__createTable()
+        self.__DBControlButtons()
         self.__createTextFilds()
         self.__createButtons()
 
@@ -37,6 +40,7 @@ class SpecialWidget(QWidget):
         self.show()
 
     def __createTable(self):
+        """Method that creates first layout with list of tables in DB, load and find buttons"""
         layout1 = QHBoxLayout()
         self.box = QComboBox()
 
@@ -72,16 +76,8 @@ class SpecialWidget(QWidget):
 
         self.mainLayout.addLayout(layout2)
 
-    def __createTextFilds(self):
-        lab1 = QLabel('Шаблон поиска')
-        lab2 = QLabel('Комментрий')
-
-        self.isInDBLab = QLabel('Регекс отсутствует в базе')
-        self.isInDBLab.setStyleSheet('QLabel {color: green}')
-
-        self.patternArea = QTextEdit()
-        self.hintArea = QTextEdit()
-
+    def __DBControlButtons(self):
+        """Method that creates buttons for 'CRUD' actions in DB"""
         self.createButton = QPushButton('Добавить')
         self.createButton.clicked.connect(lambda: self.__insertDataToDB(self.box.currentText()))
         self.correctButton = QPushButton('Редактировать')
@@ -91,11 +87,26 @@ class SpecialWidget(QWidget):
         self.cancelButton = QPushButton('Отменить')
         self.cancelButton.clicked.connect(lambda: self.__cancelAction())
 
-        buttonLayout = QHBoxLayout()
+        buttonLayout = QVBoxLayout()
         buttonLayout.addWidget(self.createButton)
         buttonLayout.addWidget(self.correctButton)
         buttonLayout.addWidget(self.deleteButton)
         buttonLayout.addWidget(self.cancelButton)
+
+        self.mainLayout.addLayout(buttonLayout)
+
+    def __createTextFilds(self):
+        """Method that creates text areas for regex and comments"""
+        lab1 = QLabel('Шаблон поиска')
+        lab2 = QLabel('Комментрий')
+
+        self.isInDBLab = QLabel('Регекс отсутствует в базе')
+        self.isInDBLab.setStyleSheet('QLabel {color: green}')
+
+        self.patternArea = QTextEdit()
+        self.patternArea.setStyleSheet('QTextEdit {font-family: Segoe UI; font-size: 14pt;}')
+        self.hintArea = QTextEdit()
+        self.hintArea.setStyleSheet('QTextEdit {font-family: Segoe UI; font-size: 14pt;}')
 
         layout = QVBoxLayout()
         layout.addWidget(lab1)
@@ -103,10 +114,10 @@ class SpecialWidget(QWidget):
         layout.addWidget(self.patternArea)
         layout.addWidget(lab2)
         layout.addWidget(self.hintArea)
-        layout.addLayout(buttonLayout)
         self.mainLayout.addLayout(layout)
 
     def __createButtons(self):
+        """Method that creates buttons with fast patterns for regex"""
         layout = QVBoxLayout()
 
         for index, value in enumerate(self.titles):
@@ -117,9 +128,11 @@ class SpecialWidget(QWidget):
         self.mainLayout.addLayout(layout)
 
     def __takeStrings(self, mark):
+        """Method that sets selected pattern for regex in the regex text area"""
         self.patternArea.insertPlainText(mark)
 
     def __loadData(self, categoryName):
+        """Method that loads all data from DB to the container"""
         connectionData = self.__connectionToDB(categoryName)
 
         connectionData[1].execute('select * from {0}'.format(connectionData[2]))
@@ -128,6 +141,7 @@ class SpecialWidget(QWidget):
         return allRegex
 
     def __uploadDataToTable(self, categoryName):
+        """Method that loads and updates data in showing table on the left side of the window"""
         self.dataInTable = self.__loadData(categoryName)
 
         if len(self.dataInTable) == 0:
@@ -137,35 +151,57 @@ class SpecialWidget(QWidget):
             self.isInDBLab.setStyleSheet('QLabel {color: green}')
             return
 
-        self.table.setColumnCount(len(self.dataInTable[0]))
+        self.table.setColumnCount(2)
         self.table.setRowCount(len(self.dataInTable))
+
+        # Sets first column size to content size
+        # Sets second column size to remained field size
+        for index in range(2):
+            if index == 0:
+                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
+            else:
+                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Stretch)
 
         for table_row_index, table_row in enumerate(self.dataInTable):
             for table_column_index, table_cell_value in enumerate(table_row):
                 self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
 
-        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
-        self.table.itemClicked.connect(lambda: self.__setDataToAreas())
+        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
+
+        # Allows to change size of the both columns
+        for index in range(2):
+            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
+
+        self.table.itemClicked.connect(lambda x, y=categoryName: self.__setDataToAreas(y))
 
         self.patternArea.clear()
         self.hintArea.clear()
 
-    def __setDataToAreas(self):
+    def __setDataToAreas(self, tableName):
+        """Method that uploads data from showing table to changing areas"""
         for i in self.table.selectedItems():
             if i.column() == 0:
                 self.id = self.table.item(i.row(), i.column()).text()
                 self.patternArea.clear()
-                self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text().replace('\\', '\\\\'))
+                self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text())
+
+                connectionData = self.__connectionToDB(tableName)
+                mysql = "select comment from {0} where id={1}".format(connectionData[2], self.id)
+
+                connectionData[1].execute(mysql)
+                comment = connectionData[1].fetchone()
+
                 self.hintArea.clear()
-                self.hintArea.append(self.table.item(i.row(), (i.column()+2)).text())
+                self.hintArea.append(comment[0])
 
     def __insertDataToDB(self, tableName):
+        """Method that inserts new data to DB"""
         connectionData = self.__connectionToDB(tableName)
 
         if self.patternArea.toPlainText() != '':
-            mysql = "insert into `{0}` SET `regex`='{1}', `comment` = '{2}'".format(connectionData[2],
-                                                                                    self.patternArea.toPlainText(),
-                                                                                    self.hintArea.toPlainText())
+            mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{2}"'.format(connectionData[2],
+                                                                                    self.__shieldedSymbols()[0],
+                                                                                    self.__shieldedSymbols()[1])
             connectionData[1].execute(mysql)
             connectionData[0].commit()
 
@@ -175,13 +211,14 @@ class SpecialWidget(QWidget):
             QMessageBox.information(self, 'Инфо', 'Добавьте регекс для внесения в базу данных')
 
     def __updateDataInRow(self, tableName):
+        """Method that updates current data in DB"""
         connectionData = self.__connectionToDB(tableName)
 
         if self.id is not None:
-            mysql = "UPDATE `{0}` SET `regex`='{1}', `comment` = '{2}' WHERE `Id` = {3}".format(connectionData[2],
-                                                                                                self.patternArea.toPlainText(),
-                                                                                                self.hintArea.toPlainText(),
-                                                                                                self.id)
+            mysql = 'UPDATE `{0}` SET `regex`="{1}", `comment` ="{2}" WHERE `Id` = {3}'.format(connectionData[2],
+                                                                                        self.__shieldedSymbols()[0],
+                                                                                        self.__shieldedSymbols()[1],
+                                                                                        self.id)
 
             connectionData[1].execute(mysql)
             connectionData[0].commit()
@@ -192,6 +229,7 @@ class SpecialWidget(QWidget):
             QMessageBox.information(self, 'Инфо', 'Выберите строку для изменения')
 
     def __deleteDataFromTable(self, tableName):
+        """Method that deletes current data from DB"""
         connectionData = self.__connectionToDB(tableName)
 
         if self.id is not None:
@@ -213,6 +251,8 @@ class SpecialWidget(QWidget):
         self.id = None
 
     def __connectionToDB(self, tableName):
+        """Method that connects to DB and return instants of connection,
+        cursor and table name according to category name"""
         con = None
         nameForTableLoad = ''
 
@@ -231,6 +271,7 @@ class SpecialWidget(QWidget):
         return con, cur, nameForTableLoad
 
     def __ifPresentInDB(self):
+        """Method that checks if regex wrote in regex field is existed"""
         if self.dataInTable is not None:
             for value in self.dataInTable:
                 fromPatternArea = self.patternArea.toPlainText().replace('\\\\', '\\')
@@ -243,15 +284,26 @@ class SpecialWidget(QWidget):
                     self.isInDBLab.setStyleSheet('QLabel {color: green}')
 
     def __searchInTable(self, text):
-        self.foundItem = self.table.findItems(text, Qt.MatchExactly)
+        """Method that searches part of regex, that was entered, in the showing table"""
+        self.foundItem = self.table.findItems(text, Qt.MatchContains)
         if len(self.foundItem) > 0:
             self.table.setCurrentCell(self.foundItem[0].row(), self.foundItem[0].column())
             self.counter = 1
 
     def __searchNextInTable(self):
+        """Method that searches next part of regex, that was entered, in the showing table"""
         if self.foundItem is not None:
             if self.counter == len(self.foundItem):
                 return
 
             self.table.setCurrentCell(self.foundItem[self.counter].row(), self.foundItem[self.counter].column())
             self.counter += 1
+
+    def __shieldedSymbols(self):
+        """Method that shields symbols in text"""
+        pattern = self.patternArea.toPlainText().replace('\\', '\\\\')
+        hint = self.hintArea.toPlainText().replace('\\', '\\\\')
+        pattern = pattern.replace("'", '\'')
+        hint = hint.replace("'", '\'')
+
+        return pattern, hint
