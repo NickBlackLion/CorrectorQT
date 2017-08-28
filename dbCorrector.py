@@ -3,6 +3,7 @@ QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QCom
 from PyQt5.QtCore import QTimer, Qt
 import shelve
 import pymysql as mdb
+import datetime as dt
 
 
 class SpecialWidget(QWidget):
@@ -29,7 +30,6 @@ class SpecialWidget(QWidget):
 
         self.dataInTable = None
         self.id = None
-        self.foundItem = None
         self.counter = 0
 
         self.timer = QTimer()
@@ -59,22 +59,18 @@ class SpecialWidget(QWidget):
         findLine = QLineEdit()
 
         findButton = QPushButton('Найти')
-        findButton.clicked.connect(lambda: self.__searchInTable(findLine.text()))
-
-        findNext = QPushButton('Найти далее...')
-        findNext.clicked.connect(lambda: self.__searchNextInTable())
+        findButton.clicked.connect(lambda: self.__searchInTable(findLine.text(), self.box.currentText()))
 
         findLayout.addWidget(findLine)
         findLayout.addWidget(findButton)
-        findLayout.addWidget(findNext)
 
         self.table = QTableWidget()
-        layout2 = QVBoxLayout()
-        layout2.addLayout(layout1)
-        layout2.addLayout(findLayout)
-        layout2.addWidget(self.table)
+        self.layout2 = QVBoxLayout()
+        self.layout2.addLayout(layout1)
+        self.layout2.addLayout(findLayout)
+        self.layout2.addWidget(self.table)
 
-        self.mainLayout.addLayout(layout2)
+        self.mainLayout.addLayout(self.layout2)
 
     def __DBControlButtons(self):
         """Method that creates buttons for 'CRUD' actions in DB"""
@@ -138,10 +134,15 @@ class SpecialWidget(QWidget):
         connectionData[1].execute('select * from {0}'.format(connectionData[2]))
         allRegex = connectionData[1].fetchall()
 
+        connectionData[0].close()
         return allRegex
 
     def __uploadDataToTable(self, categoryName):
         """Method that loads and updates data in showing table on the left side of the window"""
+        self.table.deleteLater()
+        self.table = QTableWidget()
+        self.layout2.addWidget(self.table)
+
         self.dataInTable = self.__loadData(categoryName)
 
         if len(self.dataInTable) == 0:
@@ -164,7 +165,8 @@ class SpecialWidget(QWidget):
 
         for table_row_index, table_row in enumerate(self.dataInTable):
             for table_column_index, table_cell_value in enumerate(table_row):
-                self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
+                if table_column_index < 2:
+                    self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
 
         self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
 
@@ -180,19 +182,19 @@ class SpecialWidget(QWidget):
     def __setDataToAreas(self, tableName):
         """Method that uploads data from showing table to changing areas"""
         for i in self.table.selectedItems():
-            if i.column() == 0:
-                self.id = self.table.item(i.row(), i.column()).text()
-                self.patternArea.clear()
-                self.patternArea.append(self.table.item(i.row(), (i.column()+1)).text())
+            self.id = self.table.item(i.row(), 0).text()
+            self.patternArea.clear()
+            self.patternArea.append(self.table.item(i.row(), 1).text())
 
-                connectionData = self.__connectionToDB(tableName)
-                mysql = "select comment from {0} where id={1}".format(connectionData[2], self.id)
+            connectionData = self.__connectionToDB(tableName)
+            mysql = "select comment from {0} where id={1}".format(connectionData[2], self.id)
 
-                connectionData[1].execute(mysql)
-                comment = connectionData[1].fetchone()
+            connectionData[1].execute(mysql)
+            comment = connectionData[1].fetchone()
+            connectionData[0].close()
 
-                self.hintArea.clear()
-                self.hintArea.append(comment[0])
+            self.hintArea.clear()
+            self.hintArea.append(comment[0])
 
     def __insertDataToDB(self, tableName):
         """Method that inserts new data to DB"""
@@ -204,6 +206,7 @@ class SpecialWidget(QWidget):
                                                                                     self.__shieldedSymbols()[1])
             connectionData[1].execute(mysql)
             connectionData[0].commit()
+            connectionData[0].close()
 
             self.__uploadDataToTable(tableName)
             self.__cancelAction()
@@ -215,15 +218,20 @@ class SpecialWidget(QWidget):
         connectionData = self.__connectionToDB(tableName)
 
         if self.id is not None:
+            print('__updateDataInRow 1 step')
             mysql = 'UPDATE `{0}` SET `regex`="{1}", `comment` ="{2}" WHERE `Id` = {3}'.format(connectionData[2],
                                                                                         self.__shieldedSymbols()[0],
                                                                                         self.__shieldedSymbols()[1],
                                                                                         self.id)
-
+            print('__updateDataInRow 2 step')
             connectionData[1].execute(mysql)
+            print('__updateDataInRow 3 step')
             connectionData[0].commit()
+            connectionData[0].close()
 
+            print('__updateDataInRow 4 step')
             self.__uploadDataToTable(tableName)
+            print('__updateDataInRow 5 step')
             self.__cancelAction()
         else:
             QMessageBox.information(self, 'Инфо', 'Выберите строку для изменения')
@@ -239,6 +247,7 @@ class SpecialWidget(QWidget):
 
                 connectionData[1].execute(mysql)
                 connectionData[0].commit()
+                connectionData[0].close()
 
                 self.__uploadDataToTable(tableName)
                 self.__cancelAction()
@@ -278,26 +287,65 @@ class SpecialWidget(QWidget):
                 if fromPatternArea == value[1]:
                     self.isInDBLab.setText('Регекс есть в базе')
                     self.isInDBLab.setStyleSheet('QLabel {color: red}')
+                    self.createButton.setDisabled(True)
+                    self.createButton.setStyleSheet('QPushButton {color: red}')
                     return
                 else:
                     self.isInDBLab.setText('Регекс отсутствует в базе')
                     self.isInDBLab.setStyleSheet('QLabel {color: green}')
+                    self.createButton.setDisabled(False)
+                    self.createButton.setStyleSheet('QPushButton {color: black}')
 
-    def __searchInTable(self, text):
+    def __searchInTable(self, text, tableName):
         """Method that searches part of regex, that was entered, in the showing table"""
-        self.foundItem = self.table.findItems(text, Qt.MatchContains)
-        if len(self.foundItem) > 0:
-            self.table.setCurrentCell(self.foundItem[0].row(), self.foundItem[0].column())
-            self.counter = 1
+        foundItems = self.table.findItems(text, Qt.MatchContains)
 
-    def __searchNextInTable(self):
-        """Method that searches next part of regex, that was entered, in the showing table"""
-        if self.foundItem is not None:
-            if self.counter == len(self.foundItem):
+        if len(self.foundItem) > 0:
+            self.table.deleteLater()
+            self.table = QTableWidget()
+            self.layout2.addWidget(self.table)
+
+            self.dataInTable = self.__loadData(tableName)
+
+            if len(self.dataInTable) == 0:
+                QMessageBox.information(self, 'Инфо', 'База данных пустая')
+                self.table.clear()
+                self.isInDBLab.setText('Регекс отсутствует в базе')
+                self.isInDBLab.setStyleSheet('QLabel {color: green}')
                 return
 
-            self.table.setCurrentCell(self.foundItem[self.counter].row(), self.foundItem[self.counter].column())
-            self.counter += 1
+            self.table.setColumnCount(2)
+            self.table.setRowCount(len(self.dataInTable))
+
+            # Sets first column size to content size
+            # Sets second column size to remained field size
+            for index in range(2):
+                if index == 0:
+                    self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
+                else:
+                    self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Stretch)
+
+            # TODO доделать вывод таблицы найденных регексов
+            for table_row_index, table_row in enumerate(self.dataInTable):
+                for table_column_index, table_cell_value in enumerate(table_row):
+                    for foundItem in foundItems:
+                        pass
+
+                    if table_column_index < 2:
+                        self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
+
+            self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
+
+            # Allows to change size of the both columns
+            for index in range(2):
+                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
+
+            self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
+
+            self.patternArea.clear()
+            self.hintArea.clear()
+
+
 
     def __shieldedSymbols(self):
         """Method that shields symbols in text"""

@@ -19,7 +19,6 @@ class TextArea(QTextEdit):
         to show comments for selected word when click"""
         point = QPoint(event.x(), event.y())
         cursor = self.cursorForPosition(point)
-        font = cursor.blockCharFormat().font()
 
         if len(self.textEditContainer) > 0:
             for value in self.textEditContainer:
@@ -27,16 +26,17 @@ class TextArea(QTextEdit):
 
             self.textEditContainer.clear()
 
-        for val in self.se.getCursorPoints():
-            if val[0] < cursor.position() < val[1]:
-                textEdit = QTextEdit()
-                textEdit.insertPlainText(self.se.getComments()[val])
-                textEdit.setMaximumWidth(300)
-                self.categoryGrid.addWidget(textEdit)
+        if self.se.getCursorPoints() is not None and len(self.se.getCursorPoints()) > 0:
+            for val in self.se.getCursorPoints():
+                if val[0] < cursor.position() < val[1]:
+                    textEdit = QTextEdit()
+                    textEdit.insertPlainText(self.se.getComments()[val])
+                    textEdit.setMaximumWidth(300)
+                    self.categoryGrid.addWidget(textEdit)
 
-                self.se.selectedTextDemark(val)
+                    self.se.selectedTextDemark(val)
 
-                self.textEditContainer.append(textEdit)
+                    self.textEditContainer.append(textEdit)
 
         self.setTextCursor(cursor)
         QTextEdit.mousePressEvent(self, event)
@@ -50,11 +50,13 @@ class TextArea(QTextEdit):
         hint = ''
         timer = QTimer()
 
-        for val in self.se.getCursorPoints():
-            if val[0] < cursor.position() < val[1]:
-                hint += self.se.getComments()[val] + '\n'
-                QToolTip.showText(event.globalPos(), hint)
-                timer.singleShot(1500, QToolTip.hideText)
+        if self.se.getCursorPoints() is not None and len(self.se.getCursorPoints()) > 0:
+            for val in self.se.getCursorPoints():
+                if val[0] < cursor.position() < val[1]:
+                    if self.se.getComments()[val] is not None:
+                        hint += self.se.getComments()[val] + '\n'
+                        QToolTip.showText(event.globalPos(), hint)
+                        timer.singleShot(1500, QToolTip.hideText)
 
         QTextEdit.mouseMoveEvent(self, event)
 
