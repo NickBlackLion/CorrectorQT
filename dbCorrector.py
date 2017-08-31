@@ -1,9 +1,8 @@
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
 QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox, QLineEdit, QHeaderView
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import Qt, QTimer
 import shelve
 import pymysql as mdb
-import datetime as dt
 
 
 class SpecialWidget(QWidget):
@@ -20,7 +19,7 @@ class SpecialWidget(QWidget):
                        'Пробел', '"Другие буквы"', 'Удвоение', '"Или"', 'Любой символ', 'Цифра', 'Точка',
                        'Граница слова', 'Граница слова \n-Или-\n Граница слова']
 
-        self.commandsArray = ['[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщ]', '[пхктшчсц]',
+        self.commandsArray = ['[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщь]', '[пхктшчсц]',
                               '\\s', '\\w+', '{2}', '|', '.', '[0-9]', '\\.', '\\b', '\\b|\\b']
 
         self.__createTable()
@@ -84,9 +83,9 @@ class SpecialWidget(QWidget):
         self.cancelButton.clicked.connect(lambda: self.__cancelAction())
 
         buttonLayout = QVBoxLayout()
-        buttonLayout.addWidget(self.createButton)
-        buttonLayout.addWidget(self.correctButton)
         buttonLayout.addWidget(self.deleteButton)
+        buttonLayout.addWidget(self.correctButton)
+        buttonLayout.addWidget(self.createButton)
         buttonLayout.addWidget(self.cancelButton)
 
         self.mainLayout.addLayout(buttonLayout)
@@ -281,71 +280,67 @@ class SpecialWidget(QWidget):
 
     def __ifPresentInDB(self):
         """Method that checks if regex wrote in regex field is existed"""
+        patternList = []
+
         if self.dataInTable is not None:
-            for value in self.dataInTable:
-                fromPatternArea = self.patternArea.toPlainText().replace('\\\\', '\\')
-                if fromPatternArea == value[1]:
-                    self.isInDBLab.setText('Регекс есть в базе')
-                    self.isInDBLab.setStyleSheet('QLabel {color: red}')
-                    self.createButton.setDisabled(True)
-                    self.createButton.setStyleSheet('QPushButton {color: red}')
-                    return
-                else:
-                    self.isInDBLab.setText('Регекс отсутствует в базе')
-                    self.isInDBLab.setStyleSheet('QLabel {color: green}')
-                    self.createButton.setDisabled(False)
-                    self.createButton.setStyleSheet('QPushButton {color: black}')
+            for values in self.dataInTable:
+                patternList.append(values[1])
+
+        if self.dataInTable is not None:
+            fromPatternArea = self.patternArea.toPlainText().replace('\\\\', '\\')
+            if fromPatternArea in patternList:
+                self.isInDBLab.setText('Регекс есть в базе')
+                self.isInDBLab.setStyleSheet('QLabel {color: red}')
+                self.createButton.setDisabled(True)
+                self.createButton.setStyleSheet('QPushButton {color: red}')
+                return
+            else:
+                self.isInDBLab.setText('Регекс отсутствует в базе')
+                self.isInDBLab.setStyleSheet('QLabel {color: green}')
+                self.createButton.setDisabled(False)
+                self.createButton.setStyleSheet('QPushButton {color: black}')
 
     def __searchInTable(self, text, tableName):
         """Method that searches part of regex, that was entered, in the showing table"""
         foundItems = self.table.findItems(text, Qt.MatchContains)
 
-        if len(self.foundItem) > 0:
-            self.table.deleteLater()
-            self.table = QTableWidget()
-            self.layout2.addWidget(self.table)
+        self.table.deleteLater()
+        self.table = QTableWidget()
+        self.layout2.addWidget(self.table)
 
-            self.dataInTable = self.__loadData(tableName)
+        if len(foundItems) == 0:
+            QMessageBox.information(self, 'Инфо', 'Совпадения отсутствуют')
+            self.table.clear()
+            self.isInDBLab.setText('Регекс отсутствует в базе')
+            self.isInDBLab.setStyleSheet('QLabel {color: green}')
+            return
 
-            if len(self.dataInTable) == 0:
-                QMessageBox.information(self, 'Инфо', 'База данных пустая')
-                self.table.clear()
-                self.isInDBLab.setText('Регекс отсутствует в базе')
-                self.isInDBLab.setStyleSheet('QLabel {color: green}')
-                return
+        self.table.setColumnCount(2)
+        self.table.setRowCount(len(foundItems))
 
-            self.table.setColumnCount(2)
-            self.table.setRowCount(len(self.dataInTable))
+        # Sets first column size to content size
+        # Sets second column size to remained field size
+        for index in range(2):
+            if index == 0:
+                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
+            else:
+                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Stretch)
 
-            # Sets first column size to content size
-            # Sets second column size to remained field size
-            for index in range(2):
-                if index == 0:
-                    self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
-                else:
-                    self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Stretch)
+        # TODO доделать вывод таблицы найденных регексов
+        for row_index, foundItem in enumerate(foundItems):
+            for column_index in range(2):
+                self.table.setItem(row_index, column_index, QTableWidgetItem(foundItem))
 
-            # TODO доделать вывод таблицы найденных регексов
-            for table_row_index, table_row in enumerate(self.dataInTable):
-                for table_column_index, table_cell_value in enumerate(table_row):
-                    for foundItem in foundItems:
-                        pass
+        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
 
-                    if table_column_index < 2:
-                        self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
+        # Allows to change size of the both columns
+        for index in range(2):
+            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
 
-            self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
+        self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
 
-            # Allows to change size of the both columns
-            for index in range(2):
-                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
-
-            self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
-
-            self.patternArea.clear()
-            self.hintArea.clear()
-
-
+        self.patternArea.clear()
+        self.hintArea.clear()
 
     def __shieldedSymbols(self):
         """Method that shields symbols in text"""
@@ -353,5 +348,4 @@ class SpecialWidget(QWidget):
         hint = self.hintArea.toPlainText().replace('\\', '\\\\')
         pattern = pattern.replace("'", '\'')
         hint = hint.replace("'", '\'')
-
         return pattern, hint
