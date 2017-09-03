@@ -1,3 +1,4 @@
+# coding: utf8
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
 QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox, QLineEdit, QHeaderView
 from PyQt5.QtCore import Qt, QTimer
@@ -150,27 +151,24 @@ class SpecialWidget(QWidget):
             self.isInDBLab.setText('Регекс отсутствует в базе')
             self.isInDBLab.setStyleSheet('QLabel {color: green}')
             return
-
-        self.table.setColumnCount(2)
+        columnAmount = len(self.dataInTable[0])
+        self.table.setColumnCount(columnAmount)
         self.table.setRowCount(len(self.dataInTable))
+        self.table.setColumnHidden(2, True)
 
         # Sets first column size to content size
         # Sets second column size to remained field size
-        for index in range(2):
-            if index == 0:
-                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
-            else:
-                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Stretch)
+        for index in range(columnAmount):
+            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
 
         for table_row_index, table_row in enumerate(self.dataInTable):
             for table_column_index, table_cell_value in enumerate(table_row):
-                if table_column_index < 2:
-                    self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
+                self.table.setItem(table_row_index, table_column_index, QTableWidgetItem(str(table_cell_value)))
 
-        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
+        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
 
         # Allows to change size of the both columns
-        for index in range(2):
+        for index in range(columnAmount):
             self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
 
         self.table.itemClicked.connect(lambda x, y=categoryName: self.__setDataToAreas(y))
@@ -302,39 +300,61 @@ class SpecialWidget(QWidget):
 
     def __searchInTable(self, text, tableName):
         """Method that searches part of regex, that was entered, in the showing table"""
-        foundItems = self.table.findItems(text, Qt.MatchContains)
+        if self.table is not None:
+            foundItems = self.table.findItems(text, Qt.MatchContains)
+            print(foundItems)
+            print()
+        else:
+            return
 
         self.table.deleteLater()
-        self.table = QTableWidget()
-        self.layout2.addWidget(self.table)
 
         if len(foundItems) == 0:
             QMessageBox.information(self, 'Инфо', 'Совпадения отсутствуют')
             self.table.clear()
             self.isInDBLab.setText('Регекс отсутствует в базе')
             self.isInDBLab.setStyleSheet('QLabel {color: green}')
+            self.__uploadDataToTable(tableName)
             return
 
-        self.table.setColumnCount(2)
+        self.table = QTableWidget()
+        self.layout2.addWidget(self.table)
+
+        self.table.setColumnCount(3)
         self.table.setRowCount(len(foundItems))
+        self.table.setColumnHidden(2, True)
 
         # Sets first column size to content size
         # Sets second column size to remained field size
-        for index in range(2):
-            if index == 0:
-                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
-            else:
-                self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Stretch)
+        for index in range(3):
+            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
 
-        # TODO доделать вывод таблицы найденных регексов
         for row_index, foundItem in enumerate(foundItems):
-            for column_index in range(2):
-                self.table.setItem(row_index, column_index, QTableWidgetItem(foundItem))
+            connect = self.__connectionToDB(tableName)
+            text = str(foundItem.text())
 
-        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон'))
+            for i in range(3):
+                column = ''
+
+                if i == 0:
+                    column = 'regex'
+                else:
+                    column = 'comment'
+
+                mysqlQuery = "SELECT * FROM {0} WHERE {2}='{1}'".format(connect[2], text, column)
+                connect[1].execute(mysqlQuery)
+                data = connect[1].fetchone()
+
+                if data is not None:
+                    for index in range(3):
+                        self.table.setItem(row_index, index, QTableWidgetItem(str(data[index])))
+
+        connect[0].close()
+
+        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
 
         # Allows to change size of the both columns
-        for index in range(2):
+        for index in range(3):
             self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
 
         self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
