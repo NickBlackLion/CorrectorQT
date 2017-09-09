@@ -59,7 +59,7 @@ class SpecialWidget(QWidget):
         findLine = QLineEdit()
 
         findButton = QPushButton('Найти')
-        findButton.clicked.connect(lambda: self.__searchInTable(findLine.text(), self.box.currentText()))
+        findButton.clicked.connect(lambda: self.__searchForCoincidence(findLine.text(), self.box.currentText()))
 
         findLayout.addWidget(findLine)
         findLayout.addWidget(findButton)
@@ -356,6 +356,61 @@ class SpecialWidget(QWidget):
         # Allows to change size of the both columns
         for index in range(3):
             self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
+
+        self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
+
+        self.patternArea.clear()
+        self.hintArea.clear()
+
+    def __searchForCoincidence(self, text, tableName):
+        connection = self.__connectionToDB(tableName)
+        self.table.deleteLater()
+
+        data = []
+
+        for i in range(2):
+            column = ''
+
+            if i == 0:
+                column = 'regex'
+            else:
+                column = 'comment'
+
+            mysql = "select * from {0} where {2} like '%{1}%'".format(connection[2], text, column)
+            connection[1].execute(mysql)
+            data.extend(connection[1].fetchall())
+
+        connection[0].close()
+
+        if len(data) == 0:
+            QMessageBox.information(self, 'Инфо', 'Совпадения отсутствуют')
+            self.table.clear()
+            self.isInDBLab.setText('Регекс отсутствует в базе')
+            self.isInDBLab.setStyleSheet('QLabel {color: green}')
+            self.__uploadDataToTable(tableName)
+            return
+
+        self.table = QTableWidget()
+        self.layout2.addWidget(self.table)
+
+        self.table.setColumnCount(3)
+        self.table.setRowCount(len(data))
+        self.table.setColumnHidden(2, True)
+
+        # Sets first column size to content size
+        # Sets second column size to remained field size
+        for index in range(3):
+            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
+
+        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
+
+        # Allows to change size of the both columns
+        for index in range(3):
+            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
+
+        for row_index, row_value in enumerate(data):
+            for column_index in range(len(row_value)):
+                self.table.setItem(row_index, column_index, QTableWidgetItem(str(row_value[column_index])))
 
         self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
 

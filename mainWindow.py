@@ -3,6 +3,7 @@ import sys
 import fileMenu, editMenu, specialMenu, centralWidget
 import pymysql as mdb
 import shelve
+import subprocess
 
 
 class MainWindow(QMainWindow):
@@ -29,18 +30,33 @@ class MainWindow(QMainWindow):
 
         con = None
 
-        with shelve.open('db_setup') as f:
-            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
+        try:
+            with shelve.open('db_setup') as f:
+                con = mdb.connect(f['host'], f['name'], f['password'], charset="utf8")
+                cur = con.cursor()
+
+                mysql = """create database if not EXISTS corrector
+                            DEFAULT CHARACTER set utf8
+                            DEFAULT COLLATE utf8_general_ci;"""
+
+                cur.execute(mysql)
+                con.commit()
+
+        finally:
+            con.close()
 
         try:
+            with shelve.open('db_setup') as f:
+                con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
+
             cur = con.cursor()
             with open('categories', encoding='utf-8') as f:
                 for value in f:
                     val = value.split(';')
                     cur.execute("""create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT,
                                 regex VARCHAR(255), comment VARCHAR(255));""".format(val[1].strip(' \n')))
-        except mdb.Error:
-            print('Tables already exist')
+        finally:
+            con.close()
 
         self.show()
 
