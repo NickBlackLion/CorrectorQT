@@ -12,6 +12,7 @@ class ExportImportWindow(QWidget):
         self.mainLayout = QVBoxLayout()
 
         self.label = QLabel()
+        self.label.setMinimumWidth(200)
         self.label.setText(os.getcwd())
 
         self.passButton = QPushButton('...')

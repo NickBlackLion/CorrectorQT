@@ -1,6 +1,7 @@
 # coding: utf8
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
-QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLabel, QComboBox, QLineEdit, QHeaderView
+QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit,\
+    QLabel, QComboBox, QLineEdit, QHeaderView, QSpacerItem, QSizePolicy
 from PyQt5.QtCore import Qt, QTimer
 import shelve
 import pymysql as mdb
@@ -16,12 +17,16 @@ class SpecialWidget(QWidget):
         self.resize(1100, 300)
         self.mainLayout = QHBoxLayout()
 
-        self.titles = ['Гласные', 'Согласные', 'Глухие согласные',
+        """self.titles = ['\\s[^\\.]{,40}\\s?', 'Гласные', 'Согласные', 'Глухие согласные',
                        'Пробел', '"Другие буквы"', 'Удвоение', '"Или"', 'Любой символ', 'Цифра', 'Точка',
-                       'Граница слова', 'Граница слова \n-Или-\n Граница слова']
+                       'Граница слова', 'Граница слова \n-Или-\n Граница слова']"""
 
-        self.commandsArray = ['[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщь]', '[пхктшчсц]',
-                              '\\s', '\\w+', '{2}', '|', '.', '[0-9]', '\\.', '\\b', '\\b|\\b']
+        self.titles = ['\\s[^\\.]{,40}\\s?', 'Гласные', 'Согласные', 'Глухие согласные']
+
+        """self.commandsArray = [ '\\s[^\\.]{,40}\\s?', '[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщь]', '[пхктшчсц]',
+                              '\\s', '\\w+', '{2}', '|', '.', '[0-9]', '\\.', '\\b', '\\b|\\b']"""
+
+        self.commandsArray = ['\\s[^\\.]{,40}\\s?', '[аеєиіїоуюя]', '[бвгґджзйклмнпрстфхцчшщь]', '[пхктшчсц]']
 
         self.__createTable()
         self.__DBControlButtons()
@@ -83,11 +88,15 @@ class SpecialWidget(QWidget):
         self.cancelButton = QPushButton('Отменить')
         self.cancelButton.clicked.connect(lambda: self.__cancelAction())
 
+        spacerV = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
         buttonLayout = QVBoxLayout()
+        buttonLayout.addItem(spacerV)
         buttonLayout.addWidget(self.deleteButton)
         buttonLayout.addWidget(self.correctButton)
         buttonLayout.addWidget(self.createButton)
         buttonLayout.addWidget(self.cancelButton)
+        buttonLayout.addItem(spacerV)
 
         self.mainLayout.addLayout(buttonLayout)
 
@@ -116,10 +125,18 @@ class SpecialWidget(QWidget):
         """Method that creates buttons with fast patterns for regex"""
         layout = QVBoxLayout()
 
+        spacerV = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        layout.addItem(spacerV)
         for index, value in enumerate(self.titles):
             butt = QPushButton(value)
             butt.clicked.connect(lambda x, y=self.commandsArray[index].strip('\n'): self.__takeStrings(y))
             layout.addWidget(butt)
+
+        butt = QPushButton('Кавычки')
+        butt.clicked.connect(lambda x, y='\\"\\"': self.hintArea.append(y))
+        layout.addWidget(butt)
+
+        layout.addItem(spacerV)
 
         self.mainLayout.addLayout(layout)
 
@@ -198,15 +215,27 @@ class SpecialWidget(QWidget):
         connectionData = self.__connectionToDB(tableName)
 
         if self.patternArea.toPlainText() != '':
-            mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{2}"'.format(connectionData[2],
+            idQuery = 'select MAX(id) from {0}'.format(connectionData[2])
+
+            connectionData[1].execute(idQuery)
+            maxId = connectionData[1].fetchone()
+            connectionData[0].close()
+            print(maxId)
+
+            connectionData = self.__connectionToDB(tableName)
+            mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{3}: {2}"'.format(connectionData[2],
                                                                                     self.__shieldedSymbols()[0],
-                                                                                    self.__shieldedSymbols()[1])
+                                                                                    self.__shieldedSymbols()[1],
+                                                                                    maxId[0]+1)
             connectionData[1].execute(mysql)
             connectionData[0].commit()
             connectionData[0].close()
 
+
             self.__uploadDataToTable(tableName)
             self.__cancelAction()
+            rowCount = self.table.rowCount()
+            self.table.setCurrentCell(rowCount - 1, 0)
         else:
             QMessageBox.information(self, 'Инфо', 'Добавьте регекс для внесения в базу данных')
 
@@ -215,21 +244,18 @@ class SpecialWidget(QWidget):
         connectionData = self.__connectionToDB(tableName)
 
         if self.id is not None:
-            print('__updateDataInRow 1 step')
             mysql = 'UPDATE `{0}` SET `regex`="{1}", `comment` ="{2}" WHERE `Id` = {3}'.format(connectionData[2],
                                                                                         self.__shieldedSymbols()[0],
                                                                                         self.__shieldedSymbols()[1],
                                                                                         self.id)
-            print('__updateDataInRow 2 step')
+            currentRow = self.table.currentRow()
             connectionData[1].execute(mysql)
-            print('__updateDataInRow 3 step')
             connectionData[0].commit()
             connectionData[0].close()
 
-            print('__updateDataInRow 4 step')
             self.__uploadDataToTable(tableName)
-            print('__updateDataInRow 5 step')
             self.__cancelAction()
+            self.table.setCurrentCell(currentRow, 0)
         else:
             QMessageBox.information(self, 'Инфо', 'Выберите строку для изменения')
 

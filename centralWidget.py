@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QCheckBox, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QCheckBox, QSpacerItem, QSizePolicy, QPushButton
 from PyQt5.QtGui import QTextDocument, QTextCursor
 from PyQt5.QtCore import Qt
 from searcher import Searcher
@@ -43,8 +43,13 @@ class CentralWidget(QWidget):
         spacerV = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
         spacerH = QSpacerItem(350, 1, QSizePolicy.Fixed, QSizePolicy.Minimum)
         self.categoryGrid.addItem(spacerV)
-        self.categoryGrid.addItem(spacerH)
 
+        killDoubleSpace = QPushButton('Убрать удвоенные пробелы')
+        killDoubleSpace.clicked.connect(self.__delDoubleSpaces)
+        self.categoryGrid.addWidget(killDoubleSpace)
+
+        self.categoryGrid.addItem(spacerV)
+        self.categoryGrid.addItem(spacerH)
         self.grid.addLayout(self.categoryGrid, 0, 1, 1, 1)
 
     def getDocument(self):
@@ -64,3 +69,8 @@ class CentralWidget(QWidget):
             self.se.searchAndMark()
         else:
             self.se.textDemark()
+
+    def __delDoubleSpaces(self):
+        text = self.textArea.toHtml()
+        text = text.replace('  ', ' ')
+        self.textArea.setText(text)

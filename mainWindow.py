@@ -3,7 +3,6 @@ import sys
 import fileMenu, editMenu, specialMenu, centralWidget
 import pymysql as mdb
 import shelve
-import subprocess
 
 
 class MainWindow(QMainWindow):

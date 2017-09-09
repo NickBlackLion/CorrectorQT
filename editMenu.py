@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QMenu, QAction
+from PyQt5.QtWidgets import QMenu, QAction, QWidget, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout
+from PyQt5.Qt import QTextCursor
 
 
 class EditMenu(QMenu):
@@ -54,6 +55,41 @@ class EditMenu(QMenu):
         self.addSeparator()
 
     def __findAction(self):
-        findAction = QAction('Найти', self)
-        findAction.setShortcut('Ctrl+F')
-        self.addAction(findAction)
+        self.findAction = QAction('Найти', self)
+        self.findAction.setShortcut('Ctrl+F')
+        self.findWind = FindWindow(self.textArea)
+        self.findAction.triggered.connect(lambda: self.findWind.show())
+        self.addAction(self.findAction)
+
+
+class FindWindow(QWidget):
+    def __init__(self, textArea):
+        QWidget.__init__(self)
+        self.setWindowTitle('Найти')
+        self.mainlayout = QVBoxLayout()
+        self.textArea = textArea
+
+        self.lineEdit = QLineEdit()
+        self.lineEdit.setMinimumWidth(250)
+
+        buttonLayout = QHBoxLayout()
+        self.okButton = QPushButton('Найти')
+        self.okButton.clicked.connect(self.__findAction)
+        self.cancelButton = QPushButton('Cancel')
+        self.cancelButton.clicked.connect(self.close)
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+
+        self.mainlayout.addWidget(self.lineEdit)
+        self.mainlayout.addLayout(buttonLayout)
+
+        self.setLayout(self.mainlayout)
+
+    def __findAction(self):
+        text = self.lineEdit.text()
+        if text != '':
+            found = self.textArea.find(text)
+            if not found:
+                cursor = QTextCursor()
+                cursor.atStart()
+                self.textArea.setTextCursor(cursor)

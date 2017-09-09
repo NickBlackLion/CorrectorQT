@@ -15,7 +15,7 @@ def makeImportExport(address, imp=False):
                 .format(f['name'], f['password'], f['db'], address, 'corrector_{0}.sql'.format(data))
         else:
             cmd = 'mysql -u {0} -p{1} {2} < {3}' \
-                .format(f['name'], f['password'], f['db'], address[0])
+                .format(f['name'], f['password'], f['db'], address)
 
         PIPE = subprocess.PIPE
         p = subprocess.Popen(cmd, shell=True, cwd='C:\Program files\MySQL\MySQL Workbench 6.3 CE')
