@@ -3,6 +3,7 @@ import sys
 import fileMenu, editMenu, specialMenu, centralWidget
 import pymysql as mdb
 import shelve
+import logging
 
 
 class MainWindow(QMainWindow):
@@ -13,6 +14,8 @@ class MainWindow(QMainWindow):
         self.move(100, 40)
         self.setWindowTitle('Корректор')
         self.app = app
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
 
         with shelve.open('db_setup') as f:
             if len(f) == 0:
@@ -90,12 +93,16 @@ class MainWindow(QMainWindow):
         iButton.setStyleSheet("QPushButton {text-decoration: underline}")
         iButton.clicked.connect(self.__changeTextDecoration)
 
+        killDoubleSpace = QPushButton('Убрать удвоенные пробелы')
+        killDoubleSpace.clicked.connect(self.__delDoubleSpaces)
+
         toolBar.addWidget(self.fontFamily)
         toolBar.addWidget(self.fontSize)
         toolBar.addSeparator()
         toolBar.addWidget(bButton)
         toolBar.addWidget(kButton)
         toolBar.addWidget(iButton)
+        toolBar.addWidget(killDoubleSpace)
 
     def __addCentralWidget(self):
         self.setCentralWidget(self.centralW)
@@ -245,6 +252,11 @@ class MainWindow(QMainWindow):
             QMainWindow.closeEvent(self, QCloseEvent)
         else:
             QCloseEvent.ignore()
+
+    def __delDoubleSpaces(self):
+        text = self.centralW.getTextArea().toHtml()
+        text = text.replace('  ', ' ')
+        self.centralW.getTextArea().setText(text)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

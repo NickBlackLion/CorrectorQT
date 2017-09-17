@@ -89,12 +89,16 @@ class SpecialWidget(QWidget):
         self.cancelButton.clicked.connect(lambda: self.__cancelAction())
 
         spacerV = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacerV1 = QSpacerItem(1, 40, QSizePolicy.Minimum, QSizePolicy.Fixed)
 
         buttonLayout = QVBoxLayout()
         buttonLayout.addItem(spacerV)
         buttonLayout.addWidget(self.deleteButton)
+        buttonLayout.addItem(spacerV)
         buttonLayout.addWidget(self.correctButton)
+        buttonLayout.addItem(spacerV1)
         buttonLayout.addWidget(self.createButton)
+        buttonLayout.addItem(spacerV)
         buttonLayout.addWidget(self.cancelButton)
         buttonLayout.addItem(spacerV)
 
@@ -172,6 +176,7 @@ class SpecialWidget(QWidget):
         self.table.setColumnCount(columnAmount)
         self.table.setRowCount(len(self.dataInTable))
         self.table.setColumnHidden(2, True)
+        self.table.verticalHeader().setVisible(False)
 
         # Sets first column size to content size
         # Sets second column size to remained field size
@@ -223,14 +228,19 @@ class SpecialWidget(QWidget):
             print(maxId)
 
             connectionData = self.__connectionToDB(tableName)
-            mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{3}: {2}"'.format(connectionData[2],
+            if maxId[0] is not None:
+                mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{3}: {2}"'.format(connectionData[2],
                                                                                     self.__shieldedSymbols()[0],
                                                                                     self.__shieldedSymbols()[1],
                                                                                     maxId[0]+1)
+            else:
+                mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{3}: {2}"'.format(connectionData[2],
+                                                                                    self.__shieldedSymbols()[0],
+                                                                                    self.__shieldedSymbols()[1],
+                                                                                    1)
             connectionData[1].execute(mysql)
             connectionData[0].commit()
             connectionData[0].close()
-
 
             self.__uploadDataToTable(tableName)
             self.__cancelAction()
@@ -349,6 +359,7 @@ class SpecialWidget(QWidget):
         self.table.setColumnCount(3)
         self.table.setRowCount(len(foundItems))
         self.table.setColumnHidden(2, True)
+        self.table.verticalHeader().setVisible(False)
 
         # Sets first column size to content size
         # Sets second column size to remained field size
@@ -392,6 +403,8 @@ class SpecialWidget(QWidget):
         connection = self.__connectionToDB(tableName)
         self.table.deleteLater()
 
+        replacedText = text.replace('\\', '\\\\\\\\')
+
         data = []
 
         for i in range(2):
@@ -402,7 +415,7 @@ class SpecialWidget(QWidget):
             else:
                 column = 'comment'
 
-            mysql = "select * from {0} where {2} like '%{1}%'".format(connection[2], text, column)
+            mysql = "select * from {0} where {2} like '%{1}%'".format(connection[2], replacedText, column)
             connection[1].execute(mysql)
             data.extend(connection[1].fetchall())
 
@@ -422,6 +435,7 @@ class SpecialWidget(QWidget):
         self.table.setColumnCount(3)
         self.table.setRowCount(len(data))
         self.table.setColumnHidden(2, True)
+        self.table.verticalHeader().setVisible(False)
 
         # Sets first column size to content size
         # Sets second column size to remained field size

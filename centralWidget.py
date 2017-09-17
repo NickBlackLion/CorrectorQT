@@ -44,10 +44,6 @@ class CentralWidget(QWidget):
         spacerH = QSpacerItem(350, 1, QSizePolicy.Fixed, QSizePolicy.Minimum)
         self.categoryGrid.addItem(spacerV)
 
-        killDoubleSpace = QPushButton('Убрать удвоенные пробелы')
-        killDoubleSpace.clicked.connect(self.__delDoubleSpaces)
-        self.categoryGrid.addWidget(killDoubleSpace)
-
         self.categoryGrid.addItem(spacerV)
         self.categoryGrid.addItem(spacerH)
         self.grid.addLayout(self.categoryGrid, 0, 1, 1, 1)
@@ -69,8 +65,3 @@ class CentralWidget(QWidget):
             self.se.searchAndMark()
         else:
             self.se.textDemark()
-
-    def __delDoubleSpaces(self):
-        text = self.textArea.toHtml()
-        text = text.replace('  ', ' ')
-        self.textArea.setText(text)

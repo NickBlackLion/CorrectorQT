@@ -5,7 +5,6 @@ import datetime
 
 def makeImportExport(address, imp=False):
     with shelve.open('db_setup') as f:
-        where = ''
         cmd = ''
 
         data = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -18,4 +17,4 @@ def makeImportExport(address, imp=False):
                 .format(f['name'], f['password'], f['db'], address)
 
         PIPE = subprocess.PIPE
-        p = subprocess.Popen(cmd, shell=True, cwd='C:\Program files\MySQL\MySQL Workbench 6.3 CE')
+        out, err = subprocess.Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE).communicate()
