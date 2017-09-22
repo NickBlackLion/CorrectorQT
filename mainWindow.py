@@ -1,9 +1,10 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QPushButton, QMessageBox
 import sys
 import fileMenu, editMenu, specialMenu, centralWidget
 import pymysql as mdb
 import shelve
 import logging
+import databaseConnect as dbCon
 
 
 class MainWindow(QMainWindow):
@@ -30,36 +31,24 @@ class MainWindow(QMainWindow):
         self.__addMenuBar()
         self.__addToolBar()
 
-        con = None
+        self.dbc = dbCon.DBConnector(self)
 
-        try:
-            with shelve.open('db_setup') as f:
-                con = mdb.connect(f['host'], f['name'], f['password'], charset="utf8")
-                cur = con.cursor()
+        self.dbc.getConnection(True)
+        mysql = """create database if not EXISTS corrector
+                              DEFAULT CHARACTER set utf8
+                              DEFAULT COLLATE utf8_general_ci;"""
 
-                mysql = """create database if not EXISTS corrector
-                            DEFAULT CHARACTER set utf8
-                            DEFAULT COLLATE utf8_general_ci;"""
+        self.dbc.getCursorExecute(mysql)
+        self.dbc.closeConnection()
 
-                cur.execute(mysql)
-                con.commit()
-
-        finally:
-            con.close()
-
-        try:
-            with shelve.open('db_setup') as f:
-                con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
-
-            cur = con.cursor()
-            with open('categories', encoding='utf-8') as f:
-                for value in f:
-                    val = value.split(';')
-                    cur.execute("""create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT,
-                                regex VARCHAR(255), comment VARCHAR(255));""".format(val[1].strip(' \n')))
-        finally:
-            con.close()
-
+        self.dbc.getConnection()
+        with open('categories', encoding='utf-8') as f:
+            for value in f:
+                val = value.split(';')
+                mysql = """create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT,
+                                      regex VARCHAR(255), comment VARCHAR(255));""".format(val[1].strip(' \n'))
+                self.dbc.getCursorExecute(mysql)
+        self.dbc.closeConnection()
         self.show()
 
     def __addMenuBar(self):

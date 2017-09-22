@@ -5,6 +5,7 @@ QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit,\
 from PyQt5.QtCore import Qt, QTimer
 import shelve
 import pymysql as mdb
+import databaseConnect as dbCon
 
 
 class SpecialWidget(QWidget):
@@ -36,6 +37,7 @@ class SpecialWidget(QWidget):
         self.dataInTable = None
         self.id = None
         self.counter = 0
+        self.dbc = dbCon.DBConnector(self)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.__ifPresentInDB)
@@ -150,12 +152,15 @@ class SpecialWidget(QWidget):
 
     def __loadData(self, categoryName):
         """Method that loads all data from DB to the container"""
-        connectionData = self.__connectionToDB(categoryName)
+        self.dbc.getConnection()
 
-        connectionData[1].execute('select * from {0}'.format(connectionData[2]))
-        allRegex = connectionData[1].fetchall()
+        curs = self.dbc.getCursorExecute('select * from {0}'.format(self.dbc.getTableName(categoryName)))
+        if curs is not None:
+            allRegex = curs.fetchall()
+        else:
+            allRegex = []
 
-        connectionData[0].close()
+        self.dbc.closeConnection()
         return allRegex
 
     def __uploadDataToTable(self, categoryName):
@@ -205,42 +210,39 @@ class SpecialWidget(QWidget):
             self.patternArea.clear()
             self.patternArea.append(self.table.item(i.row(), 1).text())
 
-            connectionData = self.__connectionToDB(tableName)
-            mysql = "select comment from {0} where id={1}".format(connectionData[2], self.id)
+            self.dbc.getConnection()
+            mysql = "select comment from {0} where id={1}".format(self.dbc.getTableName(tableName), self.id)
 
-            connectionData[1].execute(mysql)
-            comment = connectionData[1].fetchone()
-            connectionData[0].close()
+            comment = self.dbc.getCursorExecute(mysql).fetchone()
+            self.dbc.closeConnection()
 
             self.hintArea.clear()
             self.hintArea.append(comment[0])
 
     def __insertDataToDB(self, tableName):
         """Method that inserts new data to DB"""
-        connectionData = self.__connectionToDB(tableName)
+        self.dbc.getConnection()
 
         if self.patternArea.toPlainText() != '':
-            idQuery = 'select MAX(id) from {0}'.format(connectionData[2])
+            idQuery = 'select MAX(id) from {0}'.format(self.dbc.getTableName(tableName))
 
-            connectionData[1].execute(idQuery)
-            maxId = connectionData[1].fetchone()
-            connectionData[0].close()
-            print(maxId)
+            maxId = self.dbc.getCursorExecute(idQuery).fetchone()
 
-            connectionData = self.__connectionToDB(tableName)
             if maxId[0] is not None:
-                mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{3}: {2}"'.format(connectionData[2],
+                mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{2}\n{3}"'.format(
+                                                                                    self.dbc.getTableName(tableName),
                                                                                     self.__shieldedSymbols()[0],
                                                                                     self.__shieldedSymbols()[1],
                                                                                     maxId[0]+1)
             else:
-                mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{3}: {2}"'.format(connectionData[2],
+                mysql = 'insert into `{0}` SET `regex`="{1}", `comment` = "{2}\n{3}"'.format(
+                                                                                    self.dbc.getTableName(tableName),
                                                                                     self.__shieldedSymbols()[0],
                                                                                     self.__shieldedSymbols()[1],
                                                                                     1)
-            connectionData[1].execute(mysql)
-            connectionData[0].commit()
-            connectionData[0].close()
+            self.dbc.getCursorExecute(mysql)
+            self.dbc.commit()
+            self.dbc.closeConnection()
 
             self.__uploadDataToTable(tableName)
             self.__cancelAction()
@@ -251,17 +253,18 @@ class SpecialWidget(QWidget):
 
     def __updateDataInRow(self, tableName):
         """Method that updates current data in DB"""
-        connectionData = self.__connectionToDB(tableName)
+        self.dbc.getConnection()
 
         if self.id is not None:
-            mysql = 'UPDATE `{0}` SET `regex`="{1}", `comment` ="{2}" WHERE `Id` = {3}'.format(connectionData[2],
-                                                                                        self.__shieldedSymbols()[0],
-                                                                                        self.__shieldedSymbols()[1],
-                                                                                        self.id)
+            mysql = 'UPDATE `{0}` SET `regex`="{1}", `comment` ="{2}" WHERE `Id` = {3}'.format(
+                                                                                    self.dbc.getTableName(tableName),
+                                                                                    self.__shieldedSymbols()[0],
+                                                                                    self.__shieldedSymbols()[1],
+                                                                                    self.id)
             currentRow = self.table.currentRow()
-            connectionData[1].execute(mysql)
-            connectionData[0].commit()
-            connectionData[0].close()
+            self.dbc.getCursorExecute(mysql)
+            self.dbc.commit()
+            self.dbc.closeConnection()
 
             self.__uploadDataToTable(tableName)
             self.__cancelAction()
@@ -271,16 +274,16 @@ class SpecialWidget(QWidget):
 
     def __deleteDataFromTable(self, tableName):
         """Method that deletes current data from DB"""
-        connectionData = self.__connectionToDB(tableName)
+        self.dbc.getConnection()
 
         if self.id is not None:
             dialog = QMessageBox.question(self, 'Удаление', 'Вы действительно хотите удалить запись?')
             if dialog == QMessageBox.Yes:
-                mysql = "DELETE FROM `{0}` WHERE `Id` = {1}".format(connectionData[2], self.id)
+                mysql = "DELETE FROM `{0}` WHERE `Id` = {1}".format(self.dbc.getTableName(tableName), self.id)
 
-                connectionData[1].execute(mysql)
-                connectionData[0].commit()
-                connectionData[0].close()
+                self.dbc.getCursorExecute(mysql)
+                self.dbc.commit()
+                self.dbc.closeConnection()
 
                 self.__uploadDataToTable(tableName)
                 self.__cancelAction()
@@ -291,26 +294,6 @@ class SpecialWidget(QWidget):
         self.patternArea.clear()
         self.hintArea.clear()
         self.id = None
-
-    def __connectionToDB(self, tableName):
-        """Method that connects to DB and return instants of connection,
-        cursor and table name according to category name"""
-        con = None
-        nameForTableLoad = ''
-
-        with shelve.open('db_setup') as f:
-            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
-
-        with con:
-            cur = con.cursor()
-
-            with open('categories', encoding='utf-8') as f:
-                for value in f:
-                    tableNameIns = value.split(';')
-                    if tableNameIns[0] == tableName:
-                        nameForTableLoad = tableNameIns[1].strip(' \n')
-
-        return con, cur, nameForTableLoad
 
     def __ifPresentInDB(self):
         """Method that checks if regex wrote in regex field is existed"""
@@ -334,73 +317,8 @@ class SpecialWidget(QWidget):
                 self.createButton.setDisabled(False)
                 self.createButton.setStyleSheet('QPushButton {color: black}')
 
-    def __searchInTable(self, text, tableName):
-        """Method that searches part of regex, that was entered, in the showing table"""
-        if self.table is not None:
-            foundItems = self.table.findItems(text, Qt.MatchContains)
-            print(foundItems)
-            print()
-        else:
-            return
-
-        self.table.deleteLater()
-
-        if len(foundItems) == 0:
-            QMessageBox.information(self, 'Инфо', 'Совпадения отсутствуют')
-            self.table.clear()
-            self.isInDBLab.setText('Регекс отсутствует в базе')
-            self.isInDBLab.setStyleSheet('QLabel {color: green}')
-            self.__uploadDataToTable(tableName)
-            return
-
-        self.table = QTableWidget()
-        self.layout2.addWidget(self.table)
-
-        self.table.setColumnCount(3)
-        self.table.setRowCount(len(foundItems))
-        self.table.setColumnHidden(2, True)
-        self.table.verticalHeader().setVisible(False)
-
-        # Sets first column size to content size
-        # Sets second column size to remained field size
-        for index in range(3):
-            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.ResizeToContents)
-
-        for row_index, foundItem in enumerate(foundItems):
-            connect = self.__connectionToDB(tableName)
-            text = str(foundItem.text())
-
-            for i in range(3):
-                column = ''
-
-                if i == 0:
-                    column = 'regex'
-                else:
-                    column = 'comment'
-
-                mysqlQuery = "SELECT * FROM {0} WHERE {2}='{1}'".format(connect[2], text, column)
-                connect[1].execute(mysqlQuery)
-                data = connect[1].fetchone()
-
-                if data is not None:
-                    for index in range(3):
-                        self.table.setItem(row_index, index, QTableWidgetItem(str(data[index])))
-
-        connect[0].close()
-
-        self.table.setHorizontalHeaderLabels(('Id', 'Шаблон', 'Комментарий'))
-
-        # Allows to change size of the both columns
-        for index in range(3):
-            self.table.horizontalHeader().setSectionResizeMode(index, QHeaderView.Interactive)
-
-        self.table.itemClicked.connect(lambda x, y=tableName: self.__setDataToAreas(y))
-
-        self.patternArea.clear()
-        self.hintArea.clear()
-
     def __searchForCoincidence(self, text, tableName):
-        connection = self.__connectionToDB(tableName)
+        self.dbc.getConnection()
         self.table.deleteLater()
 
         replacedText = text.replace('\\', '\\\\\\\\')
@@ -415,11 +333,12 @@ class SpecialWidget(QWidget):
             else:
                 column = 'comment'
 
-            mysql = "select * from {0} where {2} like '%{1}%'".format(connection[2], replacedText, column)
-            connection[1].execute(mysql)
-            data.extend(connection[1].fetchall())
+            mysql = "select * from {0} where {2} like '%{1}%'".format(self.dbc.getTableName(tableName),
+                                                                      replacedText, column)
 
-        connection[0].close()
+            data.extend(self.dbc.getCursorExecute(mysql).fetchall())
+
+        self.dbc.closeConnection()
 
         if len(data) == 0:
             QMessageBox.information(self, 'Инфо', 'Совпадения отсутствуют')

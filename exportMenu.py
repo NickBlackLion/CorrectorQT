@@ -52,5 +52,5 @@ class ExportImportWindow(QWidget):
 
     def __makeExportImport(self):
         if self.label.text() is not None and self.label.text() != '':
-            importExportDB.makeImportExport(self.label.text(), self.imp)
+            importExportDB.makeImportExport(self, self.label.text(), self.imp)
             self.close()

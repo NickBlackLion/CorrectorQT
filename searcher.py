@@ -40,7 +40,7 @@ class Searcher:
                     self.cursorPoints.append(key)
                     self.regexes[key] = cursor.selectedText()
 
-                cursor.insertHtml('<p style="background-color: #88B6FC; font-family: '
+                cursor.insertHtml('<p style="background-color: #FF3333; font-family: '
                                                        + font.family() + '; font-size: ' + str(font.pointSize())
                                                        + 'pt">' + cursor.selectedText() + "</p>")
 
