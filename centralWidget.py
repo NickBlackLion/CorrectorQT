@@ -62,6 +62,8 @@ class CentralWidget(QWidget):
         if on of category is selected and unmarks if category is not selected"""
         self.se.setCategory(category)
         if state == Qt.Checked:
+            self.se.categoryChoose(True)
             self.se.searchAndMark()
         else:
             self.se.textDemark()
+            self.se.categoryChoose(False)

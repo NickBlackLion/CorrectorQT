@@ -1,6 +1,6 @@
 import pymysql as mdb
 from PyQt5.QtCore import QRegExp
-from PyQt5.Qt import Qt
+from PyQt5.Qt import Qt, QTextCursor
 import shelve
 import logging
 
@@ -17,64 +17,66 @@ class Searcher:
         self.regexes = {}
 
         self.category = None
+        self.__isCategoryChoose = False
 
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
     def searchAndMark(self):
         """Function that highlight all found concurrences"""
-        allRegex = self.__loadedBase()
+        if self.__isCategoryChoose:
+            self.comments.clear()
+            self.cursorPoints.clear()
+            self.regexes.clear()
 
-        for val in allRegex:
-            index = 0
+            allRegex = self.__loadedBase()
 
-            while index != -1:
-                regex = QRegExp(val[1], Qt.CaseInsensitive)
-                font = self.textArea.textCursor().blockCharFormat().font()
-                cursor = self.doc.find(regex, index)
+            for val in allRegex:
+                index = 0
 
-                if cursor.position() != -1:
-                    boundary = (cursor.position() - len(cursor.selectedText()), cursor.position())
-                    key = str(val[1]) + ';' + str(boundary)
-                    self.comments[key] = val[2]
-                    self.cursorPoints.append(key)
-                    self.regexes[key] = cursor.selectedText()
+                while index != -1:
+                    regex = QRegExp(val[1], Qt.CaseInsensitive)
+                    font = self.textArea.textCursor().blockCharFormat().font()
+                    cursor = self.doc.find(regex, index)
 
-                cursor.insertHtml('<p style="background-color: #FF3333; font-family: '
-                                                       + font.family() + '; font-size: ' + str(font.pointSize())
-                                                       + 'pt">' + cursor.selectedText() + "</p>")
+                    if cursor.position() != -1:
+                        boundary = (cursor.position() - len(cursor.selectedText()), cursor.position())
+                        key = str(val[1]) + ';' + str(boundary)
+                        self.comments[key] = val[2]
+                        self.cursorPoints.append(key)
+                        self.regexes[key] = cursor.selectedText()
 
-                index = cursor.position()
+                    cursor.insertHtml('<p style="background-color: #FF3333; font-family: '
+                                                           + font.family() + '; font-size: ' + str(font.pointSize())
+                                                           + 'pt">' + cursor.selectedText() + "</p>")
+
+                    index = cursor.position()
 
     def textDemark(self):
         """Function that take off highlight for all found concurrences"""
-        allRegex = self.__loadedBase()
+        if self.__isCategoryChoose:
+            font = self.cursor.blockCharFormat().font()
+            self.cursor.select(QTextCursor.Document)
+            text = self.cursor.selectedText()
 
-        for val in allRegex:
-            index = 0
+            self.textArea.clear()
 
-            while index != -1:
-                regex = QRegExp(val[1], Qt.CaseInsensitive)
-                font = self.textArea.textCursor().blockCharFormat().font()
-                cursor = self.doc.find(regex, index)
+            self.cursor.insertHtml('<body style="background-color: #ffffff; font-family: '
+                                + font.family() + '; font-size: ' + str(font.pointSize())
+                                + 'pt">' + text + "</p>")
 
-                cursor.insertHtml('<p style="background-color: #ffffff; font-family: '
-                                  + font.family() + '; font-size: ' + str(font.pointSize())
-                                  + 'pt">' + cursor.selectedText() + "</p>")
-
-                index = cursor.position()
-
-        self.cursorPoints.clear()
+            self.cursorPoints.clear()
 
     def selectedTextDemark(self, key, firstPoint):
         """Function that take off highlight for chose concurrence"""
-        word = self.regexes[key]
-        font = self.textArea.textCursor().blockCharFormat().font()
-        cursor = self.doc.find(word, firstPoint)
+        if self.__isCategoryChoose:
+            word = self.regexes[key]
+            font = self.textArea.textCursor().blockCharFormat().font()
+            cursor = self.doc.find(word, firstPoint)
 
-        cursor.insertHtml('<p style="background-color: #ffffff; font-family: '
-                                + font.family() + '; font-size: ' + str(font.pointSize())
-                                + 'pt">' + cursor.selectedText() + "</p>")
+            cursor.insertHtml('<p style="background-color: #F5EA5B; font-family: '
+                                    + font.family() + '; font-size: ' + str(font.pointSize())
+                                    + 'pt">' + cursor.selectedText() + "</p>")
 
     def deletePoints(self, key):
         self.cursorPoints.remove(key)
@@ -85,6 +87,9 @@ class Searcher:
 
     def getComments(self):
         return self.comments
+
+    def getRegexes(self):
+        return self.regexes
 
     def setCategory(self, category):
         self.category = category
@@ -112,3 +117,6 @@ class Searcher:
                 allRegex = cur.fetchall()
 
         return allRegex
+
+    def categoryChoose(self, isChoose):
+        self.__isCategoryChoose = isChoose

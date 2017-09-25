@@ -13,10 +13,14 @@ class TextArea(QTextEdit):
         self.categoryGrid = None
 
         self.textEditContainer = []
+        self.worked = {}
+        self.fixedPoints = []
 
         self.setStyleSheet('QTextEdit {font-family: Segoe UI; font-size: 14pt;}')
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
+
+        self.currentTextLength = 0
 
     def mousePressEvent(self, event):
         """Overrides native method and adds possibility
@@ -24,7 +28,6 @@ class TextArea(QTextEdit):
         point = QPoint(event.x(), event.y())
         cursor = self.cursorForPosition(point)
         position = copy.copy(cursor.position())
-        pointsToDelete = []
 
         if len(self.textEditContainer) > 0:
             for value in self.textEditContainer:
@@ -32,41 +35,24 @@ class TextArea(QTextEdit):
 
             self.textEditContainer.clear()
 
-        if self.se.getCursorPoints() is not None:
-            for val in self.se.getCursorPoints():
-                self.logger.info(val)
-
-        self.logger.info('\n')
-
         if self.se.getCursorPoints() is not None and len(self.se.getCursorPoints()) > 0:
-            self.logger.info('len before {0}'.format(len(self.se.getCursorPoints())))
             for step, val in enumerate(self.se.getCursorPoints()):
-                # self.logger.info('len = {0}'.format(len(self.se.getCursorPoints())))
                 keys = val.split(';')
-                # self.logger.info(keys)
                 coordinates = keys[1].strip('()')
-                # self.logger.info(coordinates)
                 coordinates = coordinates.split(',')
-                # self.logger.info(coordinates)
                 coordinate1 = int(coordinates[0])
                 coordinate2 = int(coordinates[1])
-                # self.logger.info(position)
                 if coordinate1 < position < coordinate2:
+                    self.fixedPoints.append(val)
+                    self.currentTextLength = len(self.toPlainText())
                     textEdit = QTextEdit()
                     textEdit.insertPlainText(self.se.getComments()[val])
                     textEdit.setMaximumWidth(300)
                     self.categoryGrid.addWidget(textEdit)
 
-                    pointsToDelete.append(val)
-
                     self.se.selectedTextDemark(val, coordinate1)
 
                     self.textEditContainer.append(textEdit)
-
-                self.logger.info('step = {0}, value = {1}'.format(step, val))
-
-            for val in pointsToDelete:
-                self.se.deletePoints(val)
 
         QTextEdit.mousePressEvent(self, event)
 
@@ -88,6 +74,50 @@ class TextArea(QTextEdit):
                         timer.singleShot(1500, QToolTip.hideText)
 
         QTextEdit.mouseMoveEvent(self, event)"""
+
+    def keyPressEvent(self, event):
+        self.logger.info('{0}, {1}'.format(self.currentTextLength, len(self.toPlainText())))
+
+        if self.currentTextLength >= len(self.toPlainText()):
+            deltaForCurrentPoint = -1
+        else:
+            deltaForCurrentPoint = 1
+        newKeys = {}
+
+        self.logger.info(self.fixedPoints)
+
+        if self.se.getCursorPoints() is not None and len(self.se.getCursorPoints()) > 0:
+            for index, value in enumerate(self.se.getCursorPoints()):
+                key = value.split(';')
+                coordinates = key[1].strip('()')
+                coordinates = coordinates.split(',')
+                coordinate1 = int(coordinates[0]) + deltaForCurrentPoint
+                coordinate2 = int(coordinates[1]) + deltaForCurrentPoint
+
+                boundary = (coordinate1, coordinate2)
+                newValue = "{0};{1}".format(key[0], str(boundary))
+                newKeys[value] = newValue
+
+        regex = ''
+        comment = ''
+
+        for key in newKeys:
+            regex = self.se.getRegexes()[key]
+            comment = self.se.getComments()[key]
+
+            del self.se.getRegexes()[key]
+            del self.se.getComments()[key]
+
+            self.se.getRegexes()[newKeys[key]] = regex
+            self.se.getComments()[newKeys[key]] = comment
+
+        self.se.getCursorPoints().clear()
+        for key in newKeys:
+            self.se.getCursorPoints().append(newKeys[key])
+
+        self.logger.info(self.se.getCursorPoints())
+
+        QTextEdit.keyPressEvent(self, event)
 
     def setSE(self, se):
         self.se = se

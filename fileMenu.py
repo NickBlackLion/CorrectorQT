@@ -70,13 +70,18 @@ class FileMenu(QMenu):
 
         if self.fileName is not None and self.fileName[0]:
             doc = Document(self.fileName[0])
+
             for paragraph in doc.paragraphs:
                 self.cursor.insertText(paragraph.text + '\n')
 
-            for table in doc.tables:
+            for table_index, table in enumerate(doc.tables):
+                self.cursor.insertText('Таблица {0}\n'.format(table_index+1))
                 for row_index in range(len(table.rows)):
                     for column_index in range(len(table.columns)):
                         self.cursor.insertText(table.cell(row_index, column_index).text + '\t')
+                    self.cursor.insertText('\n')
+                self.cursor.insertText('\n')
+
         self.doc.setModified(False)
         self.mainWindow.setWindowTitle(self.mainWindow.windowTitle() + '-' + self.fileName[0])
 
@@ -125,7 +130,6 @@ class FileMenu(QMenu):
             elif retval == hex(0x400000):
                 return False
         else:
-            print('else')
             self.doc.clear()
             self.doc.setModified(False)
             self.mainWindow.setWindowTitle('Корректор')
@@ -146,7 +150,6 @@ class FileMenu(QMenu):
             doc.add_paragraph(val + '\n')
 
         fileName = self.fileName[0].strip('.docx')
-        print(fileName)
 
         doc.save(fileName + '.docx')
         self.doc.setModified(False)
