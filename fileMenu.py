@@ -1,12 +1,17 @@
 from PyQt5.QtWidgets import QMenu, QAction, QFileDialog, QMessageBox
 from PyQt5.QtCore import QTimer
 from docx import Document
+from docx.table import Table
+import getDocContent
+import logging
 
 
 class FileMenu(QMenu):
     """Class that provides standard functions to save and to open files"""
     def __init__(self, app, mainWindow, parent, centralW):
         QMenu.__init__(self, parent)
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
 
         self.app = app
         self.doc = centralW.getDocument()
@@ -71,16 +76,18 @@ class FileMenu(QMenu):
         if self.fileName is not None and self.fileName[0]:
             doc = Document(self.fileName[0])
 
-            for paragraph in doc.paragraphs:
-                self.cursor.insertText(paragraph.text + '\n')
+            obj = getDocContent.iter_block_items(doc)
 
-            for table_index, table in enumerate(doc.tables):
-                self.cursor.insertText('Таблица {0}\n'.format(table_index+1))
-                for row_index in range(len(table.rows)):
-                    for column_index in range(len(table.columns)):
-                        self.cursor.insertText(table.cell(row_index, column_index).text + '\t')
+            for i in obj:
+                if type(i) == Table:
                     self.cursor.insertText('\n')
-                self.cursor.insertText('\n')
+                    for row_index in range(len(i.rows)):
+                        for column_index in range(len(i.columns)):
+                            self.cursor.insertText(i.cell(row_index, column_index).text + '\t')
+                        self.cursor.insertText('\n')
+                    self.cursor.insertText('\n')
+                else:
+                    self.cursor.insertText(i.text + '\n')
 
         self.doc.setModified(False)
         self.mainWindow.setWindowTitle(self.mainWindow.windowTitle() + '-' + self.fileName[0])

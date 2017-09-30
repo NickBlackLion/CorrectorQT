@@ -1,11 +1,9 @@
-# coding: utf8
 from PyQt5.QtWidgets import QTableWidget, QMessageBox, QWidget,\
 QTableWidgetItem, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit,\
     QLabel, QComboBox, QLineEdit, QHeaderView, QSpacerItem, QSizePolicy
-from PyQt5.QtCore import Qt, QTimer
-import shelve
-import pymysql as mdb
+from PyQt5.QtCore import QTimer
 import databaseConnect as dbCon
+import additionalFunctions as addFoo
 
 
 class SpecialWidget(QWidget):
@@ -119,11 +117,50 @@ class SpecialWidget(QWidget):
         self.hintArea = QTextEdit()
         self.hintArea.setStyleSheet('QTextEdit {font-family: Segoe UI; font-size: 14pt;}')
 
+        self.changeTextStyle1 = addFoo.ChangeTextCharacteristics()
+        self.changeTextStyle2 = addFoo.ChangeTextCharacteristics()
+
+        # Layer with style buttons for pattern area
+        self.firstTextEdit = QHBoxLayout()
+
+        sizeUpButton1 = QPushButton('A\u02c4')
+        sizeUpButton1.clicked.connect(lambda ev, area=self.patternArea:
+                                     self.changeTextStyle1.increaseTextSize(area))
+        sizeDownButton1 = QPushButton('a\u02c5')
+        sizeDownButton1.clicked.connect(lambda ev, area=self.patternArea:
+                                       self.changeTextStyle1.decreaseTextSize(area))
+        unprintButton1 = QPushButton('\u00b6')
+        unprintButton1.clicked.connect(lambda ev, area=self.patternArea:
+                                      self.changeTextStyle1.unprintableCharacters(area))
+
+        self.firstTextEdit.addWidget(sizeUpButton1)
+        self.firstTextEdit.addWidget(sizeDownButton1)
+        self.firstTextEdit.addWidget(unprintButton1)
+
+        # Layer with style buttons for pattern area
+        self.secondTextEdit = QHBoxLayout()
+
+        sizeUpButton2 = QPushButton('A\u02c4')
+        sizeUpButton2.clicked.connect(lambda ev, area=self.hintArea:
+                                      self.changeTextStyle2.increaseTextSize(area))
+        sizeDownButton2 = QPushButton('a\u02c5')
+        sizeDownButton2.clicked.connect(lambda ev, area=self.hintArea:
+                                        self.changeTextStyle2.decreaseTextSize(area))
+        unprintButton2 = QPushButton('\u00b6')
+        unprintButton2.clicked.connect(lambda ev, area=self.hintArea:
+                                       self.changeTextStyle2.unprintableCharacters(area))
+
+        self.secondTextEdit.addWidget(sizeUpButton2)
+        self.secondTextEdit.addWidget(sizeDownButton2)
+        self.secondTextEdit.addWidget(unprintButton2)
+
         layout = QVBoxLayout()
         layout.addWidget(lab1)
         layout.addWidget(self.isInDBLab)
+        layout.addLayout(self.firstTextEdit)
         layout.addWidget(self.patternArea)
         layout.addWidget(lab2)
+        layout.addLayout(self.secondTextEdit)
         layout.addWidget(self.hintArea)
         self.mainLayout.addLayout(layout)
 

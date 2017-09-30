@@ -79,8 +79,25 @@ class Searcher:
                                     + 'pt">' + cursor.selectedText() + "</p>")
 
     def deletePoints(self, key):
-        self.cursorPoints.remove(key)
-        del self.comments[key]
+        keys = key.split(';')
+        coordinates = keys[1].strip('()')
+        coordinates = coordinates.split(',')
+        coordinate1 = int(coordinates[0])
+        coordinate2 = int(coordinates[1])
+        font = self.textArea.textCursor().blockCharFormat().font()
+        cursor = self.cursor
+
+        cursor.setPosition(coordinate1)
+        cursor.setPosition(coordinate2, QTextCursor.KeepAnchor)
+
+        cursor.insertHtml('<p style="background-color: #66CC00; font-family: '
+                          + font.family() + '; font-size: ' + str(font.pointSize())
+                          + 'pt">' + cursor.selectedText() + "</p>")
+
+        if key in self.cursorPoints:
+            self.cursorPoints.remove(key)
+            del self.comments[key]
+            del self.regexes[key]
 
     def getCursorPoints(self):
         return self.cursorPoints

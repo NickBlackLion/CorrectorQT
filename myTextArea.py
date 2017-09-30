@@ -36,7 +36,10 @@ class TextArea(QTextEdit):
             self.textEditContainer.clear()
 
         if self.se.getCursorPoints() is not None and len(self.se.getCursorPoints()) > 0:
-            for step, val in enumerate(self.se.getCursorPoints()):
+            for val1 in self.fixedPoints:
+                self.se.deletePoints(val1)
+            self.fixedPoints.clear()
+            for val in self.se.getCursorPoints():
                 keys = val.split(';')
                 coordinates = keys[1].strip('()')
                 coordinates = coordinates.split(',')
@@ -75,19 +78,38 @@ class TextArea(QTextEdit):
 
         QTextEdit.mouseMoveEvent(self, event)"""
 
-    def keyPressEvent(self, event):
+    def keyReleaseEvent(self, event):
+        self.logger.info(event.count())
         self.logger.info('{0}, {1}'.format(self.currentTextLength, len(self.toPlainText())))
 
-        if self.currentTextLength >= len(self.toPlainText()):
+        if self.currentTextLength > len(self.toPlainText()):
             deltaForCurrentPoint = -1
         else:
             deltaForCurrentPoint = 1
         newKeys = {}
 
-        self.logger.info(self.fixedPoints)
+        for i in self.fixedPoints:
+            if i in self.se.getCursorPoints():
+                self.se.getCursorPoints().remove(i)
+
+        for value in self.fixedPoints:
+            key = value.split(';')
+            coordinates = key[1].strip('()')
+            coordinates = coordinates.split(',')
+            coordinate1 = int(coordinates[0])
+            coordinate2 = int(coordinates[1]) + deltaForCurrentPoint
+
+            boundary = (coordinate1, coordinate2)
+            newValue = "{0};{1}".format(key[0], str(boundary))
+            newKeys[value] = newValue
+
+        self.fixedPoints.clear()
+
+        for i in newKeys:
+            self.fixedPoints.append(newKeys[i])
 
         if self.se.getCursorPoints() is not None and len(self.se.getCursorPoints()) > 0:
-            for index, value in enumerate(self.se.getCursorPoints()):
+            for value in self.se.getCursorPoints():
                 key = value.split(';')
                 coordinates = key[1].strip('()')
                 coordinates = coordinates.split(',')
@@ -112,10 +134,9 @@ class TextArea(QTextEdit):
             self.se.getComments()[newKeys[key]] = comment
 
         self.se.getCursorPoints().clear()
+
         for key in newKeys:
             self.se.getCursorPoints().append(newKeys[key])
-
-        self.logger.info(self.se.getCursorPoints())
 
         QTextEdit.keyPressEvent(self, event)
 

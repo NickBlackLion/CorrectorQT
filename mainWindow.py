@@ -1,11 +1,10 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QPushButton
 import sys
 import fileMenu, editMenu, specialMenu, centralWidget
-import pymysql as mdb
 import shelve
 import logging
 import databaseConnect as dbCon
-
+import additionalFunctions as addFoo
 
 class MainWindow(QMainWindow):
     """Class that makes main window with all fillers"""
@@ -17,6 +16,7 @@ class MainWindow(QMainWindow):
         self.app = app
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
+        self.isPressed = False
 
         with shelve.open('db_setup') as f:
             if len(f) == 0:
@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
             for value in f:
                 val = value.split(';')
                 mysql = """create table if NOT EXISTS {0}(Id int PRIMARY KEY AUTO_INCREMENT,
-                                      regex VARCHAR(255), comment VARCHAR(255));""".format(val[1].strip(' \n'))
+                                      regex VARCHAR(255), comment longtext);""".format(val[1].strip(' \n'))
                 self.dbc.getCursorExecute(mysql)
         self.dbc.closeConnection()
         self.show()
@@ -65,10 +65,14 @@ class MainWindow(QMainWindow):
         self.fontFamily.activated.connect(self.__changeTextFamily)
         self.fontFamily.addItem('Segoe UI')
 
-        self.fontSize = QComboBox(toolBar)
-        for i in range(6, 31):
-            self.fontSize.addItem(str(i))
-        self.fontSize.activated.connect(self.__changeTextSize)
+        self.changeTextStyle = addFoo.ChangeTextCharacteristics()
+
+        sizeUpButton = QPushButton('A\u02c4')
+        sizeUpButton.clicked.connect(lambda ev, area=self.centralW.getTextArea():
+                                     self.changeTextStyle.increaseTextSize(area))
+        sizeDownButton = QPushButton('a\u02c5')
+        sizeDownButton.clicked.connect(lambda ev, area=self.centralW.getTextArea():
+                                       self.changeTextStyle.decreaseTextSize(area))
 
         bButton = QPushButton('B', toolBar)
         bButton.setStyleSheet("QPushButton {font-weight: bold}")
@@ -85,12 +89,18 @@ class MainWindow(QMainWindow):
         killDoubleSpace = QPushButton('Убрать удвоенные пробелы')
         killDoubleSpace.clicked.connect(self.__delDoubleSpaces)
 
+        unprintButton = QPushButton('\u00b6')
+        unprintButton.clicked.connect(lambda ev, area=self.centralW.getTextArea():
+                                           self.changeTextStyle.unprintableCharacters(area))
+
         toolBar.addWidget(self.fontFamily)
-        toolBar.addWidget(self.fontSize)
+        toolBar.addWidget(sizeUpButton)
+        toolBar.addWidget(sizeDownButton)
         toolBar.addSeparator()
         toolBar.addWidget(bButton)
         toolBar.addWidget(kButton)
         toolBar.addWidget(iButton)
+        toolBar.addWidget(unprintButton)
         toolBar.addWidget(killDoubleSpace)
 
     def __addCentralWidget(self):
@@ -245,6 +255,7 @@ class MainWindow(QMainWindow):
     def __delDoubleSpaces(self):
         text = self.centralW.getTextArea().toHtml()
         text = text.replace('  ', ' ')
+        text = text.replace('\u00b7\u00b7', '\u00b7')
         self.centralW.getTextArea().setText(text)
 
 if __name__ == '__main__':
