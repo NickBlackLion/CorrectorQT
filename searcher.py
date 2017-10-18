@@ -1,8 +1,8 @@
-import pymysql as mdb
 from PyQt5.QtCore import QRegExp
 from PyQt5.Qt import Qt, QTextCursor
-import shelve
+import re
 import logging
+import databaseConnect as dbc
 
 
 class Searcher:
@@ -22,6 +22,8 @@ class Searcher:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
+        self.dbc = dbc.DBConnector(centralW)
+
     def searchAndMark(self):
         """Function that highlight all found concurrences"""
         if self.__isCategoryChoose:
@@ -29,13 +31,24 @@ class Searcher:
             self.cursorPoints.clear()
             self.regexes.clear()
 
-            allRegex = self.__loadedBase()
+            self.dbc.getConnection()
+            query = 'select * from {0}'.format(self.dbc.getTableName(self.category))
+            sqlCursor = self.dbc.getCursorExecute(query)
+            allRegex = sqlCursor.fetchall()
+
+            self.logger.info(allRegex)
+            self.dbc.closeConnection()
 
             for val in allRegex:
                 index = 0
 
-                while index != -1:
-                    regex = QRegExp(val[1], Qt.CaseInsensitive)
+                container = re.findall(val[1], self.doc.toPlainText(), flags=re.IGNORECASE)
+                self.logger.info(container)
+
+                while len(container) > 0:
+                    self.logger.info(container[0])
+                    regex = QRegExp(container[0], Qt.CaseInsensitive)
+                    del container[0]
                     font = self.textArea.textCursor().blockCharFormat().font()
                     cursor = self.doc.find(regex, index)
 
@@ -110,30 +123,6 @@ class Searcher:
 
     def setCategory(self, category):
         self.category = category
-
-    def __loadedBase(self):
-        """Function that loads and makes connection to DB"""
-        allRegex = None
-
-        con = None
-        with shelve.open('db_setup') as f:
-            con = mdb.connect(f['host'], f['name'], f['password'], f['db'], charset="utf8")
-
-        with con:
-            cur = con.cursor()
-            nameForTableLoad = None
-
-            with open('categories', encoding='utf-8') as f:
-                for value in f:
-                    tableNameIns = value.split(';')
-                    if tableNameIns[0] == self.category:
-                        nameForTableLoad = tableNameIns[1].strip(' \n')
-
-            if nameForTableLoad is not None:
-                cur.execute('select * from {0}'.format(nameForTableLoad))
-                allRegex = cur.fetchall()
-
-        return allRegex
 
     def categoryChoose(self, isChoose):
         self.__isCategoryChoose = isChoose

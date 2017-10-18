@@ -34,9 +34,10 @@ class MainWindow(QMainWindow):
         self.dbc = dbCon.DBConnector(self)
 
         self.dbc.getConnection(True)
-        mysql = """create database if not EXISTS corrector
-                              DEFAULT CHARACTER set utf8
-                              DEFAULT COLLATE utf8_general_ci;"""
+        with shelve.open('db_setup') as f:
+            mysql = """create database if not EXISTS {0}
+                                  DEFAULT CHARACTER set utf8
+                                  DEFAULT COLLATE utf8_general_ci;""".format(f['db'])
 
         self.dbc.getCursorExecute(mysql)
         self.dbc.closeConnection()
